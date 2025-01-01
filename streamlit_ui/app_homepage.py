@@ -24,7 +24,7 @@ def load_pickle_file(file_path):
         return None
 
 def main():
-    st.title("poop")
+    st.title("KMFFL App")
 
     # Load the pickle file using a relative path
     file_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.pkl')
