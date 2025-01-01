@@ -27,7 +27,7 @@ def main():
     st.title("KMFFL App")
 
     # Load the pickle file using a relative path
-    file_path = os.path.join(os.path.dirname(__file__), 'pkl_file', 'Sheet 2.0.pkl')
+    file_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.pkl')
     df_dict = load_pickle_file(file_path)
 
     if df_dict:
