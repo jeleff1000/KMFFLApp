@@ -81,10 +81,10 @@ def main():
                                     player_data_viewer = StreamlitWeeklyPlayerDataViewer(player_data, matchup_data)
                                     player_data_viewer.display()
                                 elif sub_tab_name == "Seasons":
-                                    player_data_viewer = StreamlitSeasonPlayerDataViewer(player_data)
+                                    player_data_viewer = StreamlitSeasonPlayerDataViewer(player_data, matchup_data)
                                     player_data_viewer.display()
                                 elif sub_tab_name == "Career":
-                                    player_data_viewer = StreamlitCareerPlayerDataViewer(player_data)
+                                    player_data_viewer = StreamlitCareerPlayerDataViewer(player_data, matchup_data)
                                     player_data_viewer.display()
                             else:
                                 st.error(f"{sub_tab_name} Player Data or Matchup Data not found.")
