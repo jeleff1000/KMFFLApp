@@ -1,5 +1,3 @@
-# weekly_player_advanced_stats.py
-
 import pandas as pd
 
 def get_advanced_stats(player_data, position):
@@ -12,6 +10,29 @@ def get_advanced_stats(player_data, position):
             'dakota', 'pacr', 'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles',
             'rushing_fumbles_lost', 'rushing_first_downs', 'rushing_epa'
         ]
-        return player_data[columns]
+    elif position == 'RB':
+        columns = [
+            'player', 'team', 'week', 'season', 'owner', 'points', 'position',
+            'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles', 'rushing_fumbles_lost',
+            'rushing_first_downs', 'rushing_epa', 'targets', 'receptions', 'Rec Yds',
+            'Rec TD', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_first_downs',
+            'receiving_epa'
+        ]
+    elif position == 'WR':
+        columns = [
+            'player', 'team', 'week', 'season', 'owner', 'points', 'position',
+            'targets', 'receptions', 'Rec Yds', 'Rec TD', 'receiving_fumbles',
+            'receiving_fumbles_lost', 'receiving_first_downs', 'receiving_epa',
+            'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles', 'rushing_fumbles_lost',
+            'rushing_first_downs', 'rushing_epa'
+        ]
+    elif position == 'TE':
+        columns = [
+            'player', 'team', 'week', 'season', 'owner', 'points', 'position',
+            'targets', 'receptions', 'Rec Yds', 'Rec TD', 'receiving_fumbles',
+            'receiving_fumbles_lost', 'receiving_first_downs', 'receiving_epa'
+        ]
     else:
-        return player_data[['player']]  # Default case for other positions
+        columns = ['player']  # Default case for other positions
+
+    return player_data[columns]
