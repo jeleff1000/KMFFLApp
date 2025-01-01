@@ -5,7 +5,7 @@ from .career_player_subprocesses.career_player_advanced_stats import get_advance
 from .career_player_subprocesses.career_player_matchup_stats import get_matchup_stats
 
 class StreamlitCareerPlayerDataViewer:
-    def __init__(self, player_data):
+    def __init__(self, player_data, matchup_data=None):
         self.basic_stats_df = get_basic_stats(player_data)
         self.advanced_stats_df = get_advanced_stats(player_data)
         self.matchup_stats_df = get_matchup_stats(player_data)
