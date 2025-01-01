@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 
-class CombinedMatchupStatsViewer:
-    def __init__(self, filtered_data, matchup_data):
-        self.filtered_data = filtered_data
+class StreamlitWeeklyPlayerDataViewer:
+    def __init__(self, player_data, matchup_data):
+        self.player_data = player_data
         self.matchup_data = matchup_data
 
     def display(self, prefix):
