@@ -1,14 +1,13 @@
-# weekly_player_stats_overview.py
-
 import streamlit as st
 import pandas as pd
 from .weekly_player_subprocesses.weekly_player_basic_stats import get_basic_stats
 from .weekly_player_subprocesses.weekly_player_advanced_stats import get_advanced_stats
-from .weekly_player_subprocesses.weekly_player_matchup_stats import get_matchup_stats
+from .weekly_player_subprocesses.weekly_player_matchup_stats import CombinedMatchupStatsViewer
 
 class StreamlitWeeklyPlayerDataViewer:
-    def __init__(self, player_data):
+    def __init__(self, player_data, matchup_data):
         self.player_data = player_data
+        self.matchup_data = matchup_data
 
     def get_unique_values(self, column, filters):
         filtered_data = self.apply_filters(filters)
@@ -33,7 +32,8 @@ class StreamlitWeeklyPlayerDataViewer:
             with col1:
                 player_search = st.text_input("Search Player", key=f"player_search_{tab_index}")
             with col2:
-                owner_values = st.multiselect("Select Owner", self.get_unique_values("owner", selected_filters), key=f"owner_value_{tab_index}")
+                owner_values = st.multiselect("Select Owner", self.get_unique_values("owner", selected_filters),
+                                              key=f"owner_value_{tab_index}")
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_index}")
@@ -45,27 +45,49 @@ class StreamlitWeeklyPlayerDataViewer:
             if show_rostered:
                 selected_filters["owner"] = [owner for owner in selected_filters["owner"] if owner != "No Owner"]
                 if not selected_filters["owner"]:
-                    selected_filters["owner"] = [owner for owner in self.get_unique_values("owner", selected_filters) if owner != "No Owner"]
+                    selected_filters["owner"] = [owner for owner in self.get_unique_values("owner", selected_filters) if
+                                                 owner != "No Owner"]
 
             # Second row: Position and Fantasy Position filters
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                position_values = st.multiselect("Select Position", self.get_unique_values("position", selected_filters), key=f"position_value_{tab_index}")
+                position_values = st.multiselect("Select Position",
+                                                 self.get_unique_values("position", selected_filters),
+                                                 key=f"position_value_{tab_index}")
             with col2:
-                fantasy_position_values = st.multiselect("Select Fantasy Position", self.get_unique_values("fantasy position", selected_filters), key=f"fantasy_position_value_{tab_index}")
+                fantasy_position_values = st.multiselect("Select Fantasy Position",
+                                                         self.get_unique_values("fantasy position", selected_filters),
+                                                         key=f"fantasy_position_value_{tab_index}")
+            with col3:
+                st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
+                show_started = st.toggle("Started", value=False, key=f"show_started_{tab_index}")
             selected_filters["position"] = position_values
             selected_filters["fantasy position"] = fantasy_position_values
+
+            # Filter out players with fantasy position BN or IR if toggle is on
+            if show_started:
+                selected_filters["fantasy position"] = [pos for pos in selected_filters["fantasy position"] if
+                                                        pos not in ["BN", "IR"]]
+                if not selected_filters["fantasy position"]:
+                    selected_filters["fantasy position"] = [pos for pos in
+                                                            self.get_unique_values("fantasy position", selected_filters)
+                                                            if pos not in ["BN", "IR"]]
 
             # Third row: Team, Opponent Team, Week, and Year filters
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                team_values = st.multiselect("Select Team", self.get_unique_values("team", selected_filters), key=f"team_value_{tab_index}")
+                team_values = st.multiselect("Select Team", self.get_unique_values("team", selected_filters),
+                                             key=f"team_value_{tab_index}")
             with col2:
-                opponent_team_values = st.multiselect("Select Opponent Team", self.get_unique_values("opponent_team", selected_filters), key=f"opponent_team_value_{tab_index}")
+                opponent_team_values = st.multiselect("Select Opponent Team",
+                                                      self.get_unique_values("opponent_team", selected_filters),
+                                                      key=f"opponent_team_value_{tab_index}")
             with col3:
-                week_values = st.multiselect("Select Week", self.get_unique_values("week", selected_filters), key=f"week_value_{tab_index}")
+                week_values = st.multiselect("Select Week", self.get_unique_values("week", selected_filters),
+                                             key=f"week_value_{tab_index}")
             with col4:
-                year_values = st.multiselect("Select Year", self.get_unique_values("season", selected_filters), key=f"year_value_{tab_index}")
+                year_values = st.multiselect("Select Year", self.get_unique_values("season", selected_filters),
+                                             key=f"year_value_{tab_index}")
             selected_filters["team"] = team_values
             selected_filters["opponent_team"] = opponent_team_values
             selected_filters["week"] = week_values
@@ -93,5 +115,10 @@ class StreamlitWeeklyPlayerDataViewer:
             st.header("Matchup Stats")
             filters = display_filters(tab_index=2)
             filtered_data = self.apply_filters(filters)
-            matchup_stats_df = get_matchup_stats(filtered_data)
-            st.dataframe(matchup_stats_df, hide_index=True)
+            # Merge player_data with matchup_data to include managerweek
+            if 'managerweek' in filtered_data.columns and 'ManagerWeek' in self.matchup_data.columns:
+                merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek', right_on='ManagerWeek', how='left')
+                viewer = CombinedMatchupStatsViewer(merged_data, self.matchup_data)
+                viewer.display(prefix=f"matchup_stats_{2}")
+            else:
+                st.write("The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")
