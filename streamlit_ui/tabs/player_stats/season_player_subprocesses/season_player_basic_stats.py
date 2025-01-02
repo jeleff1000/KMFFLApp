@@ -24,10 +24,10 @@ def get_basic_stats(player_data, position):
         agg_funcs['FG%'] = 'mean'
 
     # Aggregate data by player and season
-    aggregated_data = player_data.groupby(['player', 'season']).agg(agg_funcs)
+    aggregated_data = player_data.groupby(['player', 'season', 'position']).agg(agg_funcs)
 
     # Drop the 'player' and 'season' columns if they exist before resetting the index
-    columns_to_drop = [col for col in ['player', 'season'] if col in aggregated_data.columns]
+    columns_to_drop = [col for col in ['player', 'season', 'position'] if col in aggregated_data.columns]
     if columns_to_drop:
         aggregated_data = aggregated_data.drop(columns=columns_to_drop)
 

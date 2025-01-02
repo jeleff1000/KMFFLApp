@@ -49,7 +49,7 @@ class StreamlitSeasonPlayerDataViewer:
                                                  owner != "No Owner"]
 
             # Second row: Position, Fantasy Position filters, Started toggle, and Per Game toggle
-            col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+            col1, col2, col3, col4 = st.columns([1, 1, 0.5, 0.5])
             with col1:
                 position_values = st.multiselect("Select Position",
                                                  self.get_unique_values("position", selected_filters),
@@ -89,7 +89,7 @@ class StreamlitSeasonPlayerDataViewer:
                 year_values = st.multiselect("Select Year", self.get_unique_values("season", selected_filters),
                                              key=f"year_value_{tab_name}_{tab_index}")
             selected_filters["team"] = team_values
-            selected_filters["opponent_team"] = opponent_team_values
+            selected_filters["opponent team"] = opponent_team_values
             selected_filters["season"] = year_values
 
             return selected_filters, show_per_game
@@ -134,10 +134,14 @@ class StreamlitSeasonPlayerDataViewer:
         # Merge the unique weeks with the stats dataframe
         stats_df = pd.merge(stats_df, unique_weeks, on='player', how='left')
 
+        # Ensure numeric columns are converted to float before division
+        numeric_columns = [col for col in stats_df.columns if
+                           col not in ['player', 'team', 'season', 'owner', 'position', 'unique_weeks']]
+        stats_df[numeric_columns] = stats_df[numeric_columns].apply(pd.to_numeric, errors='coerce')
+
         # Divide all the stats by the number of unique weeks
-        for col in stats_df.columns:
-            if col not in ['player', 'team', 'season', 'owner', 'position', 'unique_weeks']:
-                stats_df[col] = stats_df[col] / stats_df['unique_weeks']
+        for col in numeric_columns:
+            stats_df[col] = stats_df[col] / stats_df['unique_weeks']
 
         # Round yard stats to two digits and touchdown stats to three digits
         yard_stats = ['points', 'Pass Yds', 'Rush Yds', 'Rec Yds', 'FG Yds', 'Def Yds Allow']
