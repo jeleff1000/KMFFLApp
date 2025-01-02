@@ -38,7 +38,8 @@ class StreamlitCareerPlayerDataViewer:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_name}_{str(tab_index)}_col3")
             if player_search:
-                selected_filters["player"] = [player_search]
+                selected_filters["player"] = [player for player in self.player_data['player'].unique() if
+                                              player_search.lower() in player.lower()]
             selected_filters["owner"] = owner_values
 
             # Filter out players with "No Owner" if toggle is on
