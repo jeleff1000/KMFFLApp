@@ -4,7 +4,7 @@ def get_advanced_stats(player_data, position):
     if position == 'QB':
         columns = [
             'player', 'team', 'week', 'season', 'owner', 'points', 'position',
-            'Pass Yds', 'completions', 'attempts', 'Int Pass TD', 'sack_yards',
+            'Pass Yds', 'Pass TD', 'completions', 'attempts', 'Int', 'sack_yards',
             'sack_fumbles', 'passing_2pt_conversions', 'passing_air_yards',
             'passing_yards_after_catch', 'passing_first_downs', 'passing_epa',
             'dakota', 'pacr', 'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles',
@@ -14,15 +14,15 @@ def get_advanced_stats(player_data, position):
         columns = [
             'player', 'team', 'week', 'season', 'owner', 'points', 'position',
             'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles', 'rushing_fumbles_lost',
-            'rushing_first_downs', 'rushing_epa', 'targets', 'receptions', 'Rec Yds',
-            'Rec TD', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_first_downs',
+            'rushing_first_downs', 'rushing_epa', 'Rec', 'Rec Yds',
+            'Rec TD', 'Targets', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_first_downs',
             'receiving_epa', 'target_share', 'wopr', 'racr', 'receiving_2pt_conversions',
             'receiving_air_yards', 'receiving_yards_after_catch', 'air_yards_share'
         ]
     elif position in ['WR', 'TE']:
         columns = [
             'player', 'team', 'week', 'season', 'owner', 'points', 'position',
-            'targets', 'receptions', 'Rec Yds', 'Rec TD', 'receiving_fumbles',
+            'Rec', 'Rec Yds', 'Rec TD', 'Targets', 'receiving_fumbles',
             'receiving_fumbles_lost', 'receiving_first_downs', 'receiving_epa',
             'target_share', 'wopr', 'racr', 'receiving_2pt_conversions',
             'receiving_air_yards', 'receiving_yards_after_catch', 'air_yards_share',

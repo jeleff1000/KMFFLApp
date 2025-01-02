@@ -4,7 +4,7 @@ def get_advanced_stats(player_data, position):
     if position == 'QB':
         columns = [
             'player', 'team', 'season', 'owner', 'points', 'position',
-            'Pass Yds', 'completions', 'attempts', 'Int Pass TD', 'sack_yards',
+            'Pass Yds', 'Pass TD', 'completions', 'attempts', 'Int', 'sack_yards',
             'sack_fumbles', 'passing_2pt_conversions', 'passing_air_yards',
             'passing_yards_after_catch', 'passing_first_downs', 'passing_epa',
             'dakota', 'pacr', 'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles',
@@ -14,15 +14,15 @@ def get_advanced_stats(player_data, position):
         columns = [
             'player', 'team', 'season', 'owner', 'points', 'position',
             'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles', 'rushing_fumbles_lost',
-            'rushing_first_downs', 'rushing_epa', 'targets', 'receptions', 'Rec Yds',
-            'Rec TD', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_first_downs',
+            'rushing_first_downs', 'rushing_epa', 'Rec', 'Rec Yds',
+            'Rec TD', 'Targets', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_first_downs',
             'receiving_epa', 'target_share', 'wopr', 'racr', 'receiving_2pt_conversions',
             'receiving_air_yards', 'receiving_yards_after_catch', 'air_yards_share'
         ]
     elif position in ['WR', 'TE']:
         columns = [
             'player', 'team', 'season', 'owner', 'points', 'position',
-            'targets', 'receptions', 'Rec Yds', 'Rec TD', 'receiving_fumbles',
+            'Rec', 'Rec Yds', 'Rec TD', 'Targets', 'receiving_fumbles',
             'receiving_fumbles_lost', 'receiving_first_downs', 'receiving_epa',
             'target_share', 'wopr', 'racr', 'receiving_2pt_conversions',
             'receiving_air_yards', 'receiving_yards_after_catch', 'air_yards_share',
@@ -48,6 +48,20 @@ def get_advanced_stats(player_data, position):
     existing_columns = [col for col in columns if col in player_data.columns]
     player_data = player_data[existing_columns]
 
+    # Convert specified columns to numeric
+    numeric_columns = [
+        'points', 'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles', 'rushing_fumbles_lost',
+        'rushing_first_downs', 'rushing_epa', 'Rec', 'Rec Yds', 'Rec TD', 'Targets', 'receiving_fumbles',
+        'receiving_fumbles_lost', 'receiving_first_downs', 'receiving_epa', 'target_share', 'wopr', 'racr',
+        'receiving_2pt_conversions', 'receiving_air_yards', 'receiving_yards_after_catch', 'air_yards_share',
+        'Pass Yds', 'Pass TD', 'completions', 'attempts', 'Int', 'sack_yards', 'sack_fumbles',
+        'passing_2pt_conversions', 'passing_air_yards', 'passing_yards_after_catch', 'passing_first_downs',
+        'passing_epa', 'dakota', 'pacr'
+    ]
+    for col in numeric_columns:
+        if col in player_data.columns:
+            player_data[col] = pd.to_numeric(player_data[col], errors='coerce')
+
     # Define aggregation functions for existing columns
     agg_funcs = {col: 'sum' if col not in ['team', 'owner', 'position'] else 'first' for col in existing_columns}
     if 'FG%' in existing_columns:
@@ -64,8 +78,8 @@ def get_advanced_stats(player_data, position):
     # Reset index without inserting existing columns
     aggregated_data = aggregated_data.reset_index()
 
-    # Format the 'season' column as a string without commas
+    # Convert the 'season' column to an integer for proper sorting
     if 'season' in aggregated_data.columns:
-        aggregated_data['season'] = aggregated_data['season'].astype(str).str.replace(',', '')
+        aggregated_data['season'] = aggregated_data['season'].astype(int)
 
     return aggregated_data

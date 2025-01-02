@@ -94,28 +94,27 @@ class StreamlitWeeklyPlayerDataViewer:
             selected_filters["week"] = week_values
             selected_filters["season"] = year_values
 
-            return selected_filters
+            filtered_data = self.apply_filters(selected_filters)
+
+            return selected_filters, filtered_data
 
         with tabs[0]:
             st.header("Basic Stats")
-            filters = display_filters(tab_index=0)
-            filtered_data = self.apply_filters(filters)
+            filters, filtered_data = display_filters(tab_index=0)
             position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
             basic_stats_df = get_basic_stats(filtered_data, position)
             st.dataframe(basic_stats_df, hide_index=True)
 
         with tabs[1]:
             st.header("Advanced Stats")
-            filters = display_filters(tab_index=1)
-            filtered_data = self.apply_filters(filters)
+            filters, filtered_data = display_filters(tab_index=1)
             position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
             advanced_stats_df = get_advanced_stats(filtered_data, position)
             st.dataframe(advanced_stats_df, hide_index=True)
 
         with tabs[2]:
             st.header("Matchup Stats")
-            filters = display_filters(tab_index=2)
-            filtered_data = self.apply_filters(filters)
+            filters, filtered_data = display_filters(tab_index=2)
             # Merge player_data with matchup_data to include managerweek
             if 'managerweek' in filtered_data.columns and 'ManagerWeek' in self.matchup_data.columns:
                 merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek', right_on='ManagerWeek', how='left')
