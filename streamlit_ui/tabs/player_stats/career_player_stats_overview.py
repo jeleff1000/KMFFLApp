@@ -104,7 +104,6 @@ class StreamlitCareerPlayerDataViewer:
                 basic_stats_df = self.calculate_per_game_stats(basic_stats_df, filtered_data)
             st.dataframe(basic_stats_df, hide_index=True)
 
-        #test
         with tabs[1]:
             st.header("Advanced Stats")
             filters, show_per_game = display_filters(tab_index=1, tab_name="AdvancedStats")
