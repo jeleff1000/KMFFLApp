@@ -102,7 +102,7 @@ class KeeperDataViewer:
                 merged_df['Avg Points Next Year'] = merged_df['playeryear'].map(get_next_season_avg_points)
 
                 merged_df['Keeper Price'] = merged_df.apply(
-                    lambda row: np.ceil(max(1, (row['Cost'] * 1.5 + 7) if row['Is Keeper Status'] == 1 else max(row['Cost'], row['faab_bid'] / 2))),
+                    lambda row: np.ceil(max(1, (row['Cost'] * 1.5 + 7.5) if row['Is Keeper Status'] == 1 else max(row['Cost'], row['faab_bid'] / 2))),
                     axis=1
                 ).astype(int)
 
