@@ -38,7 +38,9 @@ class StreamlitSeasonPlayerDataViewer:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_name}_{tab_index}")
             if player_search:
-                selected_filters["player"] = [player_search]
+                selected_filters["player"] = \
+                self.player_data[self.player_data['player'].str.contains(player_search, case=False)][
+                    'player'].unique().tolist()
             selected_filters["owner"] = owner_values
 
             # Filter out players with "No Owner" if toggle is on
