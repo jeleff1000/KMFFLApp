@@ -44,7 +44,7 @@ def get_advanced_stats(player_data, position):
     else:
         columns = ['player', 'team', 'season', 'owner', 'points', 'position'] # Default case for other positions
 
-    # Filter out columns that do not exist in the player_data
+    # Filter out columns that does not exist in the player_data
     existing_columns = [col for col in columns if col in player_data.columns]
     player_data = player_data[existing_columns]
 
