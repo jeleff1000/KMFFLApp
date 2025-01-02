@@ -122,7 +122,7 @@ class StreamlitSeasonPlayerDataViewer:
             if 'managerweek' in filtered_data.columns and 'ManagerWeek' in self.matchup_data.columns:
                 merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek', right_on='ManagerWeek', how='left')
                 viewer = CombinedMatchupStatsViewer(merged_data, self.matchup_data)
-                viewer.display(prefix=f"matchup_stats_{2}")
+                viewer.display(prefix=f"matchup_stats_{2}", show_per_game=show_per_game)
             else:
                 st.write("The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")
 
@@ -144,7 +144,7 @@ class StreamlitSeasonPlayerDataViewer:
             stats_df[col] = stats_df[col] / stats_df['unique_weeks']
 
         # Round yard stats to two digits and touchdown stats to three digits
-        yard_stats = ['points', 'Pass Yds', 'Rush Yds', 'Rec Yds', 'FG Yds', 'Def Yds Allow']
+        yard_stats = ['points', 'Pass Yds', 'Rush Yds', 'Rec Yds', 'FG Yds', 'Def Yds Allow', 'team_points']
         td_stats = ['Int Pass TD', 'Rush TD', 'Rec TD', 'defensive_td']
 
         for col in yard_stats:
