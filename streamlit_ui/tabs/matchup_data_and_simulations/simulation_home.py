@@ -17,7 +17,7 @@ class SimulationDataViewer:
         with col1:
             simulation_type = st.selectbox("Select Simulation Type", [
                 "", "Gavi Stat", "Opponent Gavi Stat", "Everyone's Schedule",
-                "Vs. One Opponent", "Expected Seed", "Expected Record", "Tweak Scoring"
+                "Vs. One Opponent", "Expected Seed", "Expected Record", "Tweak Scoring", "Draft Optimizer"
             ], key="simulation_type_dropdown")
 
         if simulation_type and self.df is not None:
@@ -36,6 +36,8 @@ class SimulationDataViewer:
                 viewer = ExpectedRecordViewer(self.df)
             elif simulation_type == "Tweak Scoring":
                 viewer = TweakScoringViewer(self.df)
+            elif simulation_type == "Draft Optimizer":
+                st.query_params.update({"tab": "Draft History", "sub_tab": "Draft Optimizer"})
 
             if viewer:
                 viewer.display()

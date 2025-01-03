@@ -1,3 +1,4 @@
+# app_homepage.py
 import os
 import streamlit as st
 import pandas as pd
@@ -11,6 +12,7 @@ from tabs.hall_of_fame.hall_of_fame_homepage import HallOfFameViewer
 from tabs.player_stats.weekly_player_stats_overview import StreamlitWeeklyPlayerDataViewer
 from tabs.player_stats.season_player_stats_overview import StreamlitSeasonPlayerDataViewer
 from tabs.player_stats.career_player_stats_overview import StreamlitCareerPlayerDataViewer
+from tabs.draft_data.draft_data_overview import display_draft_data_overview
 
 # Function to load the pickle file
 @st.cache_data
@@ -89,12 +91,7 @@ def main():
                             else:
                                 st.error(f"{sub_tab_name} Player Data or Matchup Data not found.")
                 elif tab_name == "Draft History":
-                    st.header("Draft History")
-                    draft_history = df_dict.get("Draft History")
-                    if draft_history is not None:
-                        st.dataframe(draft_history)
-                    else:
-                        st.error("Draft History not found.")
+                    display_draft_data_overview(df_dict)
                 elif tab_name == "All Transactions":
                     st.header("All Transactions")
                     sub_tab_names = ["All Transactions", "Adds", "Drops", "Trades"]

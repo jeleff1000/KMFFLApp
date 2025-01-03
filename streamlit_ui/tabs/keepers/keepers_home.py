@@ -25,6 +25,9 @@ class KeeperDataViewer:
 
     @st.cache_data
     def merge_data(_self, final_week_df, draft_df, adds_df):
+        # Convert 'Year' column to integers
+        draft_df['Year'] = draft_df['Year'].astype(int)
+
         merged_df = final_week_df.merge(draft_df, left_on='playeryear', right_on='PlayerYear', how='left')
         max_faab_df = adds_df.groupby('PlayerYear')['faab_bid'].max().reset_index()
         merged_df = merged_df.merge(max_faab_df, on='PlayerYear', how='left', suffixes=('', '_max_faab'))
@@ -61,23 +64,23 @@ class KeeperDataViewer:
             merged_df['owner'] = merged_df['owner'].astype(str)
 
             # Dropdowns for owner and year
-            owners = sorted(merged_df['owner'].unique().tolist())
-            years = sorted(merged_df['season'].unique().tolist())
+            owners = ["All"] + sorted(merged_df['owner'].unique().tolist())
+            years = ["All"] + sorted(merged_df['season'].unique().tolist())
 
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                selected_owners = st.multiselect("Select Owner(s)", owners, key="owner_multiselect")
+                selected_owners = st.multiselect("Select Owner(s)", owners, default=[], key="owner_multiselect")
             with col2:
-                selected_years = st.multiselect("Select Year(s)", years, key="year_multiselect")
+                selected_years = st.multiselect("Select Year(s)", years, default=[], key="year_multiselect")
             with col3:
                 st.write("")  # Add an empty line to align the button
                 go_button = st.button("Go")
 
             if go_button:
                 # Filter based on selections
-                if selected_owners:
+                if selected_owners and "All" not in selected_owners:
                     merged_df = merged_df[merged_df['owner'].isin(selected_owners)]
-                if selected_years:
+                if selected_years and "All" not in selected_years:
                     merged_df = merged_df[merged_df['season'].isin(selected_years)]
 
                 # Calculate total and average points for playeryear
