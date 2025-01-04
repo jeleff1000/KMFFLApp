@@ -1,4 +1,3 @@
-# app_homepage.py
 import os
 import streamlit as st
 import pandas as pd
@@ -13,6 +12,7 @@ from tabs.player_stats.weekly_player_stats_overview import StreamlitWeeklyPlayer
 from tabs.player_stats.season_player_stats_overview import StreamlitSeasonPlayerDataViewer
 from tabs.player_stats.career_player_stats_overview import StreamlitCareerPlayerDataViewer
 from tabs.draft_data.draft_data_overview import display_draft_data_overview
+from tabs.injury_data.injury_overview import display_injury_overview
 
 # Function to load the pickle file
 @st.cache_data
@@ -98,18 +98,17 @@ def main():
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):
                         with sub_tabs[j]:
-                            transaction_data = df_dict.get(sub_tab_name)
-                            if transaction_data is not None:
+                            transaction_data = df_dict.get("All Transactions")
+                            player_data = df_dict.get("Player Data")
+                            injury_data = df_dict.get("Injury Data")
+                            if transaction_data is not None and player_data is not None and injury_data is not None:
                                 st.dataframe(transaction_data)
+                                st.dataframe(player_data)
+                                st.dataframe(injury_data)
                             else:
                                 st.error(f"{sub_tab_name} data not found.")
                 elif tab_name == "Injuries":
-                    st.header("Injuries")
-                    injury_data = df_dict.get("Injury Data")
-                    if injury_data is not None:
-                        st.dataframe(injury_data)
-                    else:
-                        st.error("Injury Data not found.")
+                    display_injury_overview(df_dict)
                 elif tab_name == "Simulations":
                     st.header("Simulations")
                     simulation_data = df_dict.get("Matchup Data")

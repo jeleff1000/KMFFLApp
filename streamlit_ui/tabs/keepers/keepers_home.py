@@ -69,12 +69,12 @@ class KeeperDataViewer:
 
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                selected_owners = st.multiselect("Select Owner(s)", owners, default=[], key="owner_multiselect")
+                selected_owners = st.multiselect("Select Owner(s)", owners, default=[], key="keepers_owner_multiselect")
             with col2:
-                selected_years = st.multiselect("Select Year(s)", years, default=[], key="year_multiselect")
+                selected_years = st.multiselect("Select Year(s)", years, default=[], key="keepers_year_multiselect")
             with col3:
                 st.write("")  # Add an empty line to align the button
-                go_button = st.button("Go")
+                go_button = st.button("Go", key="keepers_go_button")
 
             if go_button:
                 # Filter based on selections
