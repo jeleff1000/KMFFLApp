@@ -13,6 +13,7 @@ from tabs.player_stats.season_player_stats_overview import StreamlitSeasonPlayer
 from tabs.player_stats.career_player_stats_overview import StreamlitCareerPlayerDataViewer
 from tabs.draft_data.draft_data_overview import display_draft_data_overview
 from tabs.injury_data.injury_overview import display_injury_overview
+from tabs.transactions.transaction_overview import AllTransactionsViewer
 
 # Function to load the pickle file
 @st.cache_data
@@ -34,7 +35,7 @@ def main():
 
     if df_dict:
         # Create tabs
-        tab_names = ["Hall of Fame", "Matchup Data", "Player Data", "Draft History", "All Transactions", "Injuries", "Simulations", "Keeper"]
+        tab_names = ["Hall of Fame", "Matchup Data", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Keeper"]
         tabs = st.tabs(tab_names)
 
         # Display the content based on the selected tab
@@ -92,21 +93,16 @@ def main():
                                 st.error(f"{sub_tab_name} Player Data or Matchup Data not found.")
                 elif tab_name == "Draft History":
                     display_draft_data_overview(df_dict)
-                elif tab_name == "All Transactions":
-                    st.header("All Transactions")
-                    sub_tab_names = ["All Transactions", "Adds", "Drops", "Trades"]
-                    sub_tabs = st.tabs(sub_tab_names)
-                    for j, sub_tab_name in enumerate(sub_tab_names):
-                        with sub_tabs[j]:
-                            transaction_data = df_dict.get("All Transactions")
-                            player_data = df_dict.get("Player Data")
-                            injury_data = df_dict.get("Injury Data")
-                            if transaction_data is not None and player_data is not None and injury_data is not None:
-                                st.dataframe(transaction_data)
-                                st.dataframe(player_data)
-                                st.dataframe(injury_data)
-                            else:
-                                st.error(f"{sub_tab_name} data not found.")
+                elif tab_name == "Transactions":
+                    st.header("Transactions")
+                    transaction_data = df_dict.get("All Transactions")
+                    player_data = df_dict.get("Player Data")
+                    injury_data = df_dict.get("Injury Data")
+                    if transaction_data is not None and player_data is not None and injury_data is not None:
+                        transactions_viewer = AllTransactionsViewer(transaction_data, player_data, injury_data)
+                        transactions_viewer.display()
+                    else:
+                        st.error("Transaction data not found.")
                 elif tab_name == "Injuries":
                     display_injury_overview(df_dict)
                 elif tab_name == "Simulations":
