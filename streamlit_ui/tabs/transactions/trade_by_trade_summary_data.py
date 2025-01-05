@@ -17,9 +17,6 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     # Remove duplicate rows in draft_history_df based on Name Full and Year
     draft_history_df.drop_duplicates(subset=['Name Full', 'Year'], inplace=True)
 
-    # Adjust the Year column in draft_history_df to be year - 1
-    draft_history_df['Year'] = draft_history_df['Year'] - 1
-
     # Merge draft history data with trade transactions
     trade_transactions = pd.merge(trade_transactions, draft_history_df[['Name Full', 'Year', 'Cost', 'Is Keeper Status']],
                                   left_on=['name', 'year'], right_on=['Name Full', 'Year'], how='left')
@@ -103,10 +100,31 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
 
     # Specify the column order directly
     final_df = final_df[[
-        'transaction_id', 'manager', 'trade_partner', 'week', 'year', 'name', 'points_transaction_week', 'points_week_17', 'Cost', 'Is Keeper',
-        'traded_away_name', 'traded_away_points_transaction_week', 'traded_away_points_week_17', 'traded_away_Cost', 'traded_away_Is Keeper',
-        'points_gained_in_trade'
+        'manager', 'trade_partner', 'week', 'year', 'name', 'traded_away_name', 'Is Keeper', 'points_gained_in_trade', 'points_transaction_week',
+        'points_week_17',  'traded_away_points_transaction_week', 'traded_away_points_week_17', 'traded_away_Cost',
+        'traded_away_Is Keeper','Cost', 'transaction_id',
     ]]
+
+    # Rename columns for clarity
+    final_df.rename(columns={
+        'transaction_id': 'id',
+        'manager': 'mngr',
+        'trade_partner': 'prtnr',
+        'week': 'wk',
+        'year': 'yr',
+        'name': 'acquired',
+        'traded_away_name': 'traded_away',
+        'points_gained_in_trade': 'pts_gained',
+        'Is Keeper': 'nxt_yr_keeper',
+        'points_transaction_week': 'acqrd_pre_trade_pts',
+        'points_week_17': 'acqrd_pts_post_trade',
+        'Cost': 'next_yr_draft_price',
+        'traded_away_points_transaction_week': 'traded_away_pts_pre_trade',
+        'traded_away_points_week_17': 'traded_away_pts_post_trade',
+        'traded_away_Cost': 'traded_away_price_next_year',
+        'traded_away_Is Keeper': 'traded_away_keeper',
+
+    }, inplace=True)
 
     # Initialize trade_summary_df in session state
     st.session_state['trade_summary_df'] = final_df
@@ -114,7 +132,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     # Add search bars
     col1, col2, col3 = st.columns(3)
     with col1:
-        year_search = st.selectbox('Search by Year', options=['All'] + list(final_df['year'].unique()), key='year_search_trades_summary')
+        year_search = st.selectbox('Search by Year', options=['All'] + list(final_df['yr'].unique()), key='year_search_trades_summary')
     with col2:
         name_search = st.text_input('Search by Player Name', key='player_search_trades_summary')
     with col3:
@@ -123,11 +141,11 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     # Filter the DataFrame based on search inputs
     filtered_df = final_df.copy()
     if year_search and year_search != 'All':
-        filtered_df = filtered_df[filtered_df['year'] == year_search]
+        filtered_df = filtered_df[filtered_df['yr'] == year_search]
     if nickname_search:
-        filtered_df = filtered_df[filtered_df['manager'].str.contains(nickname_search, case=False, na=False)]
+        filtered_df = filtered_df[filtered_df['mngr'].str.contains(nickname_search, case=False, na=False)]
     if name_search:
-        filtered_df = filtered_df[filtered_df['name'].str.contains(name_search, case=False, na=False)]
+        filtered_df = filtered_df[filtered_df['acquired'].str.contains(name_search, case=False, na=False)]
 
     # Display the final data in a table without the index
     st.dataframe(filtered_df, hide_index=True)
