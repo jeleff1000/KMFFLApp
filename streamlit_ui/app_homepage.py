@@ -45,7 +45,6 @@ def main():
                     hall_of_fame_viewer = HallOfFameViewer(df_dict)
                     hall_of_fame_viewer.display()
                 elif tab_name == "Matchup Data":
-                    st.header("Matchup Data")
                     sub_tab_names = ["Weekly", "Seasons", "Career"]
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):
@@ -72,7 +71,6 @@ def main():
                                 else:
                                     st.error("Career Matchup Data not found.")
                 elif tab_name == "Player Data":
-                    st.header("Player Data")
                     sub_tab_names = ["Weekly", "Seasons", "Career"]
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):
@@ -94,7 +92,6 @@ def main():
                 elif tab_name == "Draft History":
                     display_draft_data_overview(df_dict)
                 elif tab_name == "Transactions":
-                    st.header("Transactions")
                     transaction_data = df_dict.get("All Transactions")
                     player_data = df_dict.get("Player Data")
                     injury_data = df_dict.get("Injury Data")

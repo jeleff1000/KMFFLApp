@@ -24,8 +24,6 @@ class WeeklyMatchupDataViewer:
         return filtered_df
 
     def display(self, prefix=""):
-        st.header("Weekly Matchup Data")
-
         if self.df is not None:
             # Dropdown filters for Manager and opponent
             col1, col2 = st.columns([1, 1])

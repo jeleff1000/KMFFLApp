@@ -28,8 +28,6 @@ class SeasonMatchupOverviewViewer:
         return filtered_df
 
     def display(self, prefix=""):
-        st.header("Season Matchup Data")
-
         if self.df is not None:
             # Dropdown filters for Manager, opponent, and year
             col1, col2, col3 = st.columns([1, 1, 1])
