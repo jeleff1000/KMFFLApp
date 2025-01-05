@@ -98,8 +98,9 @@ def main():
                     transaction_data = df_dict.get("All Transactions")
                     player_data = df_dict.get("Player Data")
                     injury_data = df_dict.get("Injury Data")
-                    if transaction_data is not None and player_data is not None and injury_data is not None:
-                        transactions_viewer = AllTransactionsViewer(transaction_data, player_data, injury_data)
+                    draft_history_data = df_dict.get("Draft History")
+                    if transaction_data is not None and player_data is not None and injury_data is not None and draft_history_data is not None:
+                        transactions_viewer = AllTransactionsViewer(transaction_data, player_data, injury_data, draft_history_data)
                         transactions_viewer.display()
                     else:
                         st.error("Transaction data not found.")
