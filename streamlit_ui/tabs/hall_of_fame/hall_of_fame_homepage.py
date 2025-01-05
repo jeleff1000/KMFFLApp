@@ -1,8 +1,5 @@
 import streamlit as st
 import pandas as pd
-from ..keepers.keepers_home import KeeperDataViewer
-from ..matchup_data_and_simulations.simulation_home import display_simulations_viewer
-from ..hall_of_fame.top_teams import TopTeamsViewer
 
 class HallOfFameViewer:
     def __init__(self, df_dict):
@@ -39,13 +36,4 @@ class HallOfFameViewer:
 
     def display(self):
         st.title("Hall of Fame")
-
-        # Dropdown menu for selecting a viewer
-        viewer_options = ["Champions", "Matchup Data", "Player Data", "Keeper", "Simulations", "Top Teams"]
-        selected_viewer = st.selectbox("Select a Viewer", viewer_options, index=0)
-
-        if selected_viewer == "Champions":
-            self.display_champions()
-        elif selected_viewer == "Top Teams":
-            top_teams_viewer = TopTeamsViewer(self.df_dict.get("Matchup Data"))
-            top_teams_viewer.display()
+        self.display_champions()

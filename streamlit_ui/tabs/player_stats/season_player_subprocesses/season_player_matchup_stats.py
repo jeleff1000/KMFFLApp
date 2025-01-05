@@ -16,7 +16,7 @@ class CombinedMatchupStatsViewer:
         # Convert 'Included in optimal score' to boolean
         merged_data['Included in optimal score'] = merged_data['Included in optimal score'] == 1
 
-        # Aggregate data by player, position, manager, and season
+        # Aggregate data by player, position, and season
         agg_funcs = {
             'points': 'sum',
             'team_points': 'sum',
@@ -28,9 +28,17 @@ class CombinedMatchupStatsViewer:
             'semifinal': 'sum',
             'championship': 'sum',
             'Champion': 'sum',
-            'is_playoffs': 'sum'
+            'is_playoffs': 'sum',
+            'Manager': lambda x: ', '.join(x.unique())
         }
-        aggregated_data = merged_data.groupby(['player', 'position', 'Manager', 'season']).agg(agg_funcs).reset_index()
+        aggregated_data = merged_data.groupby(['player', 'position', 'season']).agg(agg_funcs).reset_index()
+
+        # Calculate the count of unique managers
+        unique_manager_count = merged_data.groupby(['player', 'position', 'season'])['Manager'].nunique().reset_index()
+        unique_manager_count.rename(columns={'Manager': 'unique_manager_count'}, inplace=True)
+
+        # Merge the unique manager count back into the aggregated data
+        aggregated_data = pd.merge(aggregated_data, unique_manager_count, on=['player', 'position', 'season'], how='left')
 
         if show_per_game:
             # Calculate the number of unique weeks for each player
@@ -67,5 +75,5 @@ class CombinedMatchupStatsViewer:
         aggregated_data['Team_Made_Playoffs'] = aggregated_data['Team_Made_Playoffs'].astype(bool)
 
         # Select and display the required columns
-        display_df = aggregated_data[['player', 'position', 'Manager', 'season', 'points', 'team_points', 'win', 'loss', 'started', 'Included in optimal score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check']]
+        display_df = aggregated_data[['player', 'position', 'Manager', 'season', 'points', 'team_points', 'win', 'loss', 'started', 'Included in optimal score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check', 'unique_manager_count']]
         st.dataframe(display_df, hide_index=True)
