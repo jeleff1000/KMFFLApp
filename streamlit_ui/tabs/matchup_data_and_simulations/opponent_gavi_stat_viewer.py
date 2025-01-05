@@ -6,83 +6,84 @@ class OpponentGaviStatViewer(WeeklyMatchupDataViewer):
     def display(self):
         st.subheader("Opponent Gavi Stat Simulation")
 
-        # Add dropdown for selecting year with left-aligned narrower width
-        col1, col2 = st.columns([1, 3])
+        # Add dropdowns for selecting manager and year with left-aligned narrower width
+        col1, col2, col3 = st.columns([1, 1, 3])
         with col1:
+            managers = ["All"] + sorted(self.df['Manager'].unique().tolist())
+            selected_manager = st.selectbox("Select Manager", managers, key="opponent_gavi_stat_manager_dropdown", help="Select the manager for the simulation")
+        with col2:
             years = ["All"] + sorted(self.df['year'].astype(int).unique().tolist())
             default_year = max(years[1:])  # Set default to the largest year
             selected_year = st.selectbox("Select Year", years, index=years.index(default_year), key="opponent_gavi_stat_year_dropdown", help="Select the year for the simulation")
 
-        # Add checkboxes for including Regular Season, Playoffs, and Consolation in one row
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col1:
-            include_regular_season = st.checkbox("Include Regular Season", value=True, key="include_regular_season")
-        with col2:
-            include_playoffs = st.checkbox("Include Playoffs", value=False, key="include_playoffs")
-        with col3:
-            include_consolation = st.checkbox("Include Consolation", value=False, key="include_consolation")
+        # Add aggregate toggle
+        aggregate_toggle = st.toggle("Aggregate All Years", value=False, key="opponent_gavi_stat_aggregate_toggle")
 
-        # Add Go button
-        go_button = st.button("Go", key="opponent_gavi_stat_go_button")
+        # Calculate xWins, xLosses, and delta for each Manager and year
+        def calculate_xwins_xlosses(df):
+            df['xWins'] = df['opponent_teams_beat_this_week'] / 9
+            df['xLosses'] = (df['win'] + df['loss']) - df['xWins']
+            df['delta'] = df['win'] - df['xWins']
+            return df
 
-        if go_button:
-            # Filter data based on selected year
-            if selected_year != "All":
-                filtered_df = self.df[self.df['year'] == int(selected_year)]
-            else:
-                filtered_df = self.df
+        self.df = self.df.groupby(['Manager', 'year']).apply(calculate_xwins_xlosses).reset_index(drop=True)
 
-            # Filter data based on checkboxes
-            if include_regular_season:
-                regular_season_df = filtered_df[(filtered_df['is_playoffs'] == 0) & (filtered_df['is_consolation'] == 0)]
-            else:
-                regular_season_df = pd.DataFrame()
+        # Filter data based on selected manager and year
+        if selected_manager != "All":
+            filtered_df = self.df[self.df['Manager'] == selected_manager]
+        else:
+            filtered_df = self.df
 
-            if include_playoffs:
-                playoffs_df = filtered_df[filtered_df['is_playoffs'] == 1]
-            else:
-                playoffs_df = pd.DataFrame()
+        if selected_year != "All":
+            filtered_df = filtered_df[filtered_df['year'] == int(selected_year)]
 
-            if include_consolation:
-                consolation_df = filtered_df[filtered_df['is_consolation'] == 1]
-            else:
-                consolation_df = pd.DataFrame()
+        # Exclude games where is_playoffs or is_consolation is 1
+        filtered_df = filtered_df[(filtered_df['is_playoffs'] == 0) & (filtered_df['is_consolation'] == 0)]
 
-            filtered_df = pd.concat([regular_season_df, playoffs_df, consolation_df])
+        # Group by Manager and year, and aggregate the results
+        result_df = filtered_df.groupby(['Manager', 'year']).agg({
+            'win': 'sum',
+            'loss': 'sum',
+            'opponent_teams_beat_this_week': 'sum',
+            'xWins': 'sum',
+            'xLosses': 'sum',
+            'delta': 'sum'
+        }).reset_index()
 
-            # Group by Manager and aggregate the results
-            result_df = filtered_df.groupby('Manager').agg({
+        # If aggregate toggle is selected, aggregate the results based on the manager
+        if selected_year == "All" and aggregate_toggle:
+            result_df = result_df.groupby('Manager').agg({
                 'win': 'sum',
                 'loss': 'sum',
-                'opponent_teams_beat_this_week': 'sum'
+                'xWins': 'sum',
+                'xLosses': 'sum',
+                'delta': 'sum'
             }).reset_index()
 
-            # Calculate xWins, xLosses, and delta
-            total_managers = filtered_df['Manager'].nunique()
-            result_df['xWins'] = result_df['win'] + result_df['loss'] - (result_df['opponent_teams_beat_this_week'] / (total_managers - 1))
-            result_df['xLosses'] = result_df['opponent_teams_beat_this_week'] / (total_managers - 1)
-            result_df['delta'] = result_df['win'] - result_df['xWins']
-
-            # Hide opponent_teams_beat_this_week from the viewer
+        # Check if 'opponent_teams_beat_this_week' exists before dropping
+        if 'opponent_teams_beat_this_week' in result_df.columns:
             result_df = result_df.drop(columns=['opponent_teams_beat_this_week'])
 
-            # Set index to Manager
+        # Format the year column as a string without commas
+        if not aggregate_toggle:
+            result_df['year'] = result_df['year'].astype(str).str.replace(',', '')
+
+        # Set index to Manager and year if not aggregated
+        if aggregate_toggle:
             result_df = result_df.set_index('Manager')
+        else:
+            result_df = result_df.set_index(['Manager', 'year'])
 
-            # Apply color scale and round for display
-            styled_df = result_df.style.format({
-                'xWins': '{:.2f}',
-                'xLosses': '{:.2f}',
-                'delta': '{:.2f}'
-            }).background_gradient(
-                subset=['win', 'xWins', 'delta'], cmap='RdYlGn', axis=0
-            ).background_gradient(
-                subset=['loss', 'xLosses'], cmap='RdYlGn_r', axis=0
-            )
+        # Apply color scale and round for display
+        styled_df = result_df.style.format({
+            'xWins': '{:.2f}',
+            'xLosses': '{:.2f}',
+            'delta': '{:.2f}'
+        }).background_gradient(
+            subset=['win', 'xWins', 'delta'], cmap='RdYlGn', axis=0
+        ).background_gradient(
+            subset=['loss', 'xLosses'], cmap='RdYlGn_r', axis=0
+        )
 
-            # Store the result in session state
-            st.session_state['result_df'] = styled_df
-
-        # Display the result if available in session state
-        if 'result_df' in st.session_state:
-            st.dataframe(st.session_state['result_df'])
+        # Display the result
+        st.dataframe(styled_df)
