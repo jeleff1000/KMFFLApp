@@ -23,7 +23,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
 
     # Merge the dataframes for Weekly Trades using left join, selecting only necessary columns
     merged_df = pd.merge(trade_transactions[['transaction_id', 'name', 'week', 'year', 'transaction_type', 'faab_bid', 'nickname', 'Cost', 'Is Keeper Status']],
-                         player_df[['player', 'week', 'season', 'rolling_point_total']],
+                         player_df[['player', 'week', 'season', 'rolling_point_total', 'position']],
                          left_on=['name', 'week', 'year'], right_on=['player', 'week', 'season'], how='left')
 
     # Ensure nickname column has no missing values after merge
@@ -43,6 +43,11 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     # Calculate the difference between the maximum week up to week 17 and the transaction week
     merged_df['points_week_17'] = merged_df['points_week_17'] - merged_df['points_transaction_week']
 
+    # Calculate Rest of Season Position Rank
+    merged_df['Rest_of_Season_Rank'] = merged_df.groupby('position')['points_week_17'].rank(ascending=False, method='min')
+    merged_df['Rest_of_Season_Rank'] = merged_df['Rest_of_Season_Rank'].fillna(0).astype(int)
+    merged_df['Rest_of_Season_Rank'] = merged_df['position'] + merged_df['Rest_of_Season_Rank'].astype(str)
+
     # Rename columns
     merged_df.rename(columns={
         'faab_bid': 'faab',
@@ -52,6 +57,13 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     # Add a boolean column for "Is Keeper Status"
     merged_df['Is Keeper'] = merged_df['Is Keeper Status']
 
+    # Function to sort names and ranks
+    def sort_names_ranks(names, ranks):
+        combined = list(zip(names, ranks))
+        combined.sort(key=lambda x: int(''.join(filter(str.isdigit, x[1])) if ''.join(filter(str.isdigit, x[1])) else '0'))
+        sorted_names, sorted_ranks = zip(*combined)
+        return ', '.join(sorted_names), ', '.join(sorted_ranks)
+
     # Aggregate data by transaction_id and manager, summing the Is Keeper column and joining names with a comma
     aggregated_df = merged_df.groupby(['transaction_id', 'manager']).agg({
         'week': 'first',
@@ -60,8 +72,15 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'points_transaction_week': 'sum',
         'points_week_17': 'sum',
         'Cost': 'sum',
-        'Is Keeper': 'sum'
+        'Is Keeper': 'sum',
+        'Rest_of_Season_Rank': lambda x: ', '.join(x.astype(str))
     }).reset_index()
+
+    # Sort names and ranks
+    aggregated_df[['name', 'Rest_of_Season_Rank']] = aggregated_df.apply(
+        lambda row: sort_names_ranks(row['name'].split(', '), row['Rest_of_Season_Rank'].split(', ')),
+        axis=1, result_type='expand'
+    )
 
     # Create a DataFrame for traded away players
     traded_away_df = merged_df.copy()
@@ -70,7 +89,8 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'points_transaction_week': 'traded_away_points_transaction_week',
         'points_week_17': 'traded_away_points_week_17',
         'Cost': 'traded_away_Cost',
-        'Is Keeper': 'traded_away_Is Keeper'
+        'Is Keeper': 'traded_away_Is Keeper',
+        'Rest_of_Season_Rank': 'traded_away_Rest_of_Season_Rank'
     }, inplace=True)
 
     # Aggregate traded away data by transaction_id and manager
@@ -79,8 +99,15 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'traded_away_points_transaction_week': 'sum',
         'traded_away_points_week_17': 'sum',
         'traded_away_Cost': 'sum',
-        'traded_away_Is Keeper': 'sum'
+        'traded_away_Is Keeper': 'sum',
+        'traded_away_Rest_of_Season_Rank': lambda x: ', '.join(x.astype(str))
     }).reset_index()
+
+    # Sort traded away names and ranks
+    traded_away_aggregated_df[['traded_away_name', 'traded_away_Rest_of_Season_Rank']] = traded_away_aggregated_df.apply(
+        lambda row: sort_names_ranks(row['traded_away_name'].split(', '), row['traded_away_Rest_of_Season_Rank'].split(', ')),
+        axis=1, result_type='expand'
+    )
 
     # Merge the traded away aggregated DataFrame with the aggregated DataFrame based on transaction_id
     final_df = pd.merge(aggregated_df, traded_away_aggregated_df, on='transaction_id', suffixes=('', '_away'))
@@ -100,7 +127,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
 
     # Specify the column order directly
     final_df = final_df[[
-        'manager', 'trade_partner', 'week', 'year', 'name', 'traded_away_name', 'Is Keeper', 'points_gained_in_trade', 'points_transaction_week',
+        'manager', 'trade_partner', 'week', 'year', 'name', 'Rest_of_Season_Rank', 'traded_away_name', 'traded_away_Rest_of_Season_Rank', 'Is Keeper', 'points_gained_in_trade', 'points_transaction_week',
         'points_week_17',  'traded_away_points_transaction_week', 'traded_away_points_week_17', 'traded_away_Cost',
         'traded_away_Is Keeper','Cost', 'transaction_id',
     ]]
@@ -113,7 +140,9 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'week': 'wk',
         'year': 'yr',
         'name': 'acquired',
+        'Rest_of_Season_Rank': 'acquired_rank',
         'traded_away_name': 'traded_away',
+        'traded_away_Rest_of_Season_Rank': 'traded_away_rank',
         'points_gained_in_trade': 'pts_gained',
         'Is Keeper': 'nxt_yr_keeper',
         'points_transaction_week': 'acqrd_pre_trade_pts',

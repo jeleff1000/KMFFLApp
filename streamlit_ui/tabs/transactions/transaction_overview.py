@@ -16,11 +16,9 @@ class AllTransactionsViewer:
         tabs = st.tabs(tab_names)
 
         with tabs[0]:
-            st.subheader("Add/Drop")
             add_drop_overview.display_add_drop(self.transaction_df, self.player_df, self.injury_df)
 
         with tabs[1]:
-            st.subheader("Trades")
             trade_overview.display_trades(self.transaction_df, self.player_df, self.injury_df, self.draft_history_df)
 
 # Example usage

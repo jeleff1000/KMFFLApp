@@ -46,6 +46,11 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
     # Calculate the difference between the maximum week up to week 17 and the transaction week
     merged_df['points_week_17'] = merged_df['points_week_17'] - merged_df['points_transaction_week']
 
+    # Calculate Rest of Season Position Rank
+    merged_df['Rest_of_Season_Rank'] = merged_df.groupby('position')['points_week_17'].rank(ascending=False, method='min')
+    merged_df['Rest_of_Season_Rank'] = merged_df['Rest_of_Season_Rank'].fillna(0).astype(int)
+    merged_df['Rest_of_Season_Rank'] = merged_df['position'] + merged_df['Rest_of_Season_Rank'].astype(str)
+
     # Rename columns
     merged_df.rename(columns={
         'faab_bid': 'faab',
@@ -69,7 +74,7 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
 
     # Specify the column order directly
     merged_df = merged_df[[
-        'transaction_id', 'manager', 'week', 'year', 'name', 'position', 'points_transaction_week', 'points_week_17', 'Cost', 'Is Keeper'
+        'transaction_id', 'manager', 'week', 'year', 'name', 'position', 'points_transaction_week', 'points_week_17', 'Rest_of_Season_Rank', 'Cost', 'Is Keeper'
     ]]
 
     # Add search bars in rows

@@ -5,8 +5,6 @@ from .season_injury_stats import SeasonInjuryStatsViewer
 from .career_injury_stats import CareerInjuryStatsViewer
 
 def display_injury_overview(df_dict):
-    st.header("Injury Overview")
-
     injury_data = df_dict.get("Injury Data")
     player_data = df_dict.get("Player Data")
 
@@ -32,8 +30,6 @@ class InjuryStatsViewer:
         self.career_viewer = CareerInjuryStatsViewer()
 
     def display(self, merged_data):
-        st.header("Injury Stats")
-
         # Create tabs
         tab_names = ["Weekly Injury Stats", "Season Injury Stats", "Career Injury Stats"]
         tabs = st.tabs(tab_names)
