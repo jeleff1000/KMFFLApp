@@ -152,7 +152,6 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'traded_away_points_week_17': 'traded_away_pts_post_trade',
         'traded_away_Cost': 'traded_away_price_next_year',
         'traded_away_Is Keeper': 'traded_away_keeper',
-
     }, inplace=True)
 
     # Initialize trade_summary_df in session state

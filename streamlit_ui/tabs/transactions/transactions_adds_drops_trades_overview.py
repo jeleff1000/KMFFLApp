@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 from . import trade_overview
 from . import add_drop_overview
+from . import combo_transaction_overview
 
 class AllTransactionsViewer:
     def __init__(self, transaction_df, player_df, injury_df, draft_history_df):
@@ -12,7 +13,7 @@ class AllTransactionsViewer:
 
     def display(self):
         # Create main tabs
-        tab_names = ["Add/Drop", "Trades"]
+        tab_names = ["Add/Drop", "Trades", "Total Transactions"]
         tabs = st.tabs(tab_names)
 
         with tabs[0]:
@@ -21,11 +22,5 @@ class AllTransactionsViewer:
         with tabs[1]:
             trade_overview.display_trades(self.transaction_df, self.player_df, self.injury_df, self.draft_history_df)
 
-# Example usage
-if __name__ == "__main__":
-    transaction_df = pd.DataFrame()  # Load your transaction data here
-    player_df = pd.DataFrame()  # Load your player data here
-    injury_df = pd.DataFrame()  # Load your injury data here
-    draft_history_df = pd.DataFrame()  # Load your draft history data here
-    viewer = AllTransactionsViewer(transaction_df, player_df, injury_df, draft_history_df)
-    viewer.display()
+        with tabs[2]:
+            combo_transaction_overview.AllTransactionOverview(self.transaction_df, self.player_df, self.injury_df, self.draft_history_df).display()

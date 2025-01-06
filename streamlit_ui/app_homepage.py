@@ -13,7 +13,7 @@ from tabs.player_stats.season_player_stats_overview import StreamlitSeasonPlayer
 from tabs.player_stats.career_player_stats_overview import StreamlitCareerPlayerDataViewer
 from tabs.draft_data.draft_data_overview import display_draft_data_overview
 from tabs.injury_data.injury_overview import display_injury_overview
-from tabs.transactions.transaction_overview import AllTransactionsViewer
+from tabs.transactions.transactions_adds_drops_trades_overview import AllTransactionsViewer
 
 # Function to load the pickle file
 @st.cache_data

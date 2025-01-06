@@ -1,7 +1,8 @@
+# streamlit_ui/tabs/transactions/weekly_add_drop.py
 import pandas as pd
 import streamlit as st
 
-def display_weekly_add_drop(transaction_df, player_df):
+def display_weekly_add_drop(transaction_df, player_df, keys=None, include_search_bars=True):
     # Drop unnecessary columns from transaction_df
     transaction_df = transaction_df.drop(columns=['trader_team_key', 'tradee_team_key'], errors='ignore')
 
@@ -90,36 +91,37 @@ def display_weekly_add_drop(transaction_df, player_df):
         if not previous_owner.empty:
             aggregated_df.at[index, 'manager'] = previous_owner.iloc[0]
 
-    # Add search bars in rows
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        year_search = st.selectbox('Search by Year', options=['All'] + list(aggregated_df['year'].unique()), key='year_search')
-    with col2:
-        name_search = st.text_input('Search by Added Player Name', key='added_player_search')
-    with col3:
-        nickname_search = st.text_input('Search by Manager', key='nickname_search')
+    if include_search_bars and keys:
+        # Add search bars in rows with unique keys
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            year_search = st.selectbox('Search by Year', options=['All'] + list(aggregated_df['year'].unique()), key=keys['year_search'])
+        with col2:
+            name_search = st.text_input('Search by Added Player Name', key=keys['added_player_search'])
+        with col3:
+            nickname_search = st.text_input('Search by Manager', key=keys['nickname_search'])
 
-    col4, col5, col6 = st.columns(3)
-    with col4:
-        dropped_name_search = st.text_input('Search by Dropped Player Name', key='dropped_player_search')
-    with col5:
-        added_position_search = st.selectbox('Search by Added Player Position', options=['All'] + list(aggregated_df['add_pos'].unique()), key='added_position_search')
-    with col6:
-        dropped_position_search = st.selectbox('Search by Dropped Player Position', options=['All'] + list(aggregated_df['drop_pos'].unique()), key='dropped_position_search')
+        col4, col5, col6 = st.columns(3)
+        with col4:
+            dropped_name_search = st.text_input('Search by Dropped Player Name', key=keys['dropped_player_search'])
+        with col5:
+            added_position_search = st.selectbox('Search by Added Player Position', options=['All'] + list(aggregated_df['add_pos'].unique()), key=keys['added_position_search'])
+        with col6:
+            dropped_position_search = st.selectbox('Search by Dropped Player Position', options=['All'] + list(aggregated_df['drop_pos'].unique()), key=keys['dropped_position_search'])
 
-    # Filter the DataFrame based on search inputs
-    if year_search and year_search != 'All':
-        aggregated_df = aggregated_df[aggregated_df['year'] == year_search]
-    if nickname_search:
-        aggregated_df = aggregated_df[aggregated_df['manager'].str.contains(nickname_search, case=False, na=False)]
-    if name_search:
-        aggregated_df = aggregated_df[aggregated_df['added_player'].str.contains(name_search, case=False, na=False)]
-    if dropped_name_search:
-        aggregated_df = aggregated_df[aggregated_df['dropped_player'].str.contains(dropped_name_search, case=False, na=False)]
-    if added_position_search and added_position_search != 'All':
-        aggregated_df = aggregated_df[aggregated_df['add_pos'] == added_position_search]
-    if dropped_position_search and dropped_position_search != 'All':
-        aggregated_df = aggregated_df[aggregated_df['drop_pos'] == dropped_position_search]
+        # Filter the DataFrame based on search inputs
+        if year_search and year_search != 'All':
+            aggregated_df = aggregated_df[aggregated_df['year'] == year_search]
+        if nickname_search:
+            aggregated_df = aggregated_df[aggregated_df['manager'].str.contains(nickname_search, case=False, na=False)]
+        if name_search:
+            aggregated_df = aggregated_df[aggregated_df['added_player'].str.contains(name_search, case=False, na=False)]
+        if dropped_name_search:
+            aggregated_df = aggregated_df[aggregated_df['dropped_player'].str.contains(dropped_name_search, case=False, na=False)]
+        if added_position_search and added_position_search != 'All':
+            aggregated_df = aggregated_df[aggregated_df['add_pos'] == added_position_search]
+        if dropped_position_search and dropped_position_search != 'All':
+            aggregated_df = aggregated_df[aggregated_df['drop_pos'] == dropped_position_search]
 
     # Display the merged data in a table without the index
     st.dataframe(aggregated_df, hide_index=True)

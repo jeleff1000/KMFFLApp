@@ -28,16 +28,16 @@ class WeeklyMatchupDataViewer:
             # Dropdown filters for Manager and opponent
             col1, col2 = st.columns([1, 1])
             with col1:
-                managers = ["All"] + sorted(self.df['Manager'].unique().tolist())
-                selected_managers = st.multiselect("Select Manager(s)", managers, default=["All"], key=f"{prefix}_managers")
-                if "All" in selected_managers:
-                    selected_managers = managers[1:]  # Select all managers if "All" is selected
+                managers = sorted(self.df['Manager'].unique().tolist())
+                selected_managers = st.multiselect("Select Manager(s)", managers, default=[], key=f"{prefix}_managers")
+                if not selected_managers:
+                    selected_managers = managers  # Select all managers if empty
 
             with col2:
-                opponents = ["All"] + sorted(self.df['opponent'].unique().tolist())
-                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=["All"], key=f"{prefix}_opponents")
-                if "All" in selected_opponents:
-                    selected_opponents = opponents[1:]  # Select all opponents if "All" is selected
+                opponents = sorted(self.df['opponent'].unique().tolist())
+                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=[], key=f"{prefix}_opponents")
+                if not selected_opponents:
+                    selected_opponents = opponents  # Select all opponents if empty
 
             # Checkboxes for game types
             col3, col4, col5 = st.columns([1, 1, 1])
