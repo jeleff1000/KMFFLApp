@@ -61,17 +61,17 @@ def display_season_optimal_lineup(player_df, matchup_data):
     aggregated_df['lost_points'] = aggregated_df['optimal_points'] - aggregated_df['team_points']
 
     # Reorder columns
-    aggregated_df = aggregated_df[['Manager', 'week', 'year', 'opponent', 'team_points', 'optimal_points', 'lost_points', 'win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_score', 'opponent_optimal', 'is_playoffs', 'is_consolation']]
+    aggregated_df = aggregated_df[['Manager', 'week', 'year', 'opponent','win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_score', 'opponent_optimal',  'team_points', 'optimal_points', 'lost_points', 'is_playoffs', 'is_consolation']]
 
     # Aggregate the data on Manager and year
     season_aggregated_df = aggregated_df.groupby(['Manager', 'year']).agg({
-        'team_points': 'sum',
         'win': 'sum',
         'loss': 'sum',
-        'optimal_points': 'sum',
-        'lost_points': 'sum',
         'optimal_win': 'sum',
         'optimal_loss': 'sum',
+        'team_points': 'sum',
+        'optimal_points': 'sum',
+        'lost_points': 'sum',
         'opponent_score': 'sum',
         'opponent_optimal': 'sum'
     }).reset_index()

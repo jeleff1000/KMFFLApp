@@ -60,7 +60,7 @@ class CareerMatchupOverviewViewer:
             # Filter the DataFrame based on selected managers, opponents, years, and game types
             filtered_df = self.filter_data(self.df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Lineups"]
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats"]
             tabs = st.tabs(tab_names)
 
             for i, tab_name in enumerate(tab_names):
@@ -77,7 +77,7 @@ class CareerMatchupOverviewViewer:
                         from .career_projected_stats import SeasonProjectedStatsViewer as CareerProjectedStatsViewer
                         viewer = CareerProjectedStatsViewer(filtered_df)
                         viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
-                    elif tab_name == "Optimal Lineups":
+                    elif tab_name == "Optimal Stats":
                         display_career_optimal_lineup(self.player_df, filtered_df)
 
             st.subheader("Summary Data")
