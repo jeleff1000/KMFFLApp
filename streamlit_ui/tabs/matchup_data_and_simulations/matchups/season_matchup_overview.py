@@ -21,11 +21,11 @@ class SeasonMatchupOverviewViewer:
             if consolation:
                 conditions.append(filtered_df['is_consolation'] == 1)
             filtered_df = filtered_df[pd.concat(conditions, axis=1).any(axis=1)]
-        if "All" not in selected_managers:
+        if selected_managers:
             filtered_df = filtered_df[filtered_df['Manager'].isin(selected_managers)]
-        if "All" not in selected_opponents:
+        if selected_opponents:
             filtered_df = filtered_df[filtered_df['opponent'].isin(selected_opponents)]
-        if "All" not in selected_years:
+        if selected_years:
             filtered_df = filtered_df[filtered_df['year'].isin(selected_years)]
         return filtered_df
 
@@ -34,22 +34,22 @@ class SeasonMatchupOverviewViewer:
             # Dropdown filters for Manager, opponent, and year
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                managers = ["All"] + sorted(self.df['Manager'].unique().tolist())
-                selected_managers = st.multiselect("Select Manager(s)", managers, default=["All"], key=f"{prefix}_managers")
-                if "All" in selected_managers:
-                    selected_managers = managers[1:]  # Select all managers if "All" is selected
+                managers = sorted(self.df['Manager'].unique().tolist())
+                selected_managers = st.multiselect("Select Manager(s)", managers, default=[], key=f"{prefix}_managers")
+                if not selected_managers:
+                    selected_managers = managers  # Select all managers if empty
 
             with col2:
-                opponents = ["All"] + sorted(self.df['opponent'].unique().tolist())
-                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=["All"], key=f"{prefix}_opponents")
-                if "All" in selected_opponents:
-                    selected_opponents = opponents[1:]  # Select all opponents if "All" is selected
+                opponents = sorted(self.df['opponent'].unique().tolist())
+                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=[], key=f"{prefix}_opponents")
+                if not selected_opponents:
+                    selected_opponents = opponents  # Select all opponents if empty
 
             with col3:
-                years = ["All"] + sorted(self.df['year'].astype(int).unique().tolist())
-                selected_years = st.multiselect("Select Year(s)", years, default=["All"], key=f"{prefix}_years")
-                if "All" in selected_years:
-                    selected_years = years[1:]  # Select all years if "All" is selected
+                years = sorted(self.df['year'].astype(int).unique().tolist())
+                selected_years = st.multiselect("Select Year(s)", years, default=[], key=f"{prefix}_years")
+                if not selected_years:
+                    selected_years = years  # Select all years if empty
 
             # Checkboxes for game types
             col4, col5, col6 = st.columns([1, 1, 1])

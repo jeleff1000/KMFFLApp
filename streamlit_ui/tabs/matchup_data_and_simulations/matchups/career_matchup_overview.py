@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from .career_optimal_lineups import display_career_optimal_lineup
+from .career_head_to_head_overview import CareerHeadToHeadViewer
 
 class CareerMatchupOverviewViewer:
     def __init__(self, df, player_df):
@@ -18,11 +19,11 @@ class CareerMatchupOverviewViewer:
             if consolation:
                 conditions.append(filtered_df['is_consolation'] == 1)
             filtered_df = filtered_df[pd.concat(conditions, axis=1).any(axis=1)]
-        if "All" not in selected_managers:
+        if selected_managers:
             filtered_df = filtered_df[filtered_df['Manager'].isin(selected_managers)]
-        if "All" not in selected_opponents:
+        if selected_opponents:
             filtered_df = filtered_df[filtered_df['opponent'].isin(selected_opponents)]
-        if "All" not in selected_years:
+        if selected_years:
             filtered_df = filtered_df[filtered_df['year'].isin(selected_years)]
         return filtered_df
 
@@ -31,22 +32,16 @@ class CareerMatchupOverviewViewer:
             # Dropdown filters for Manager, opponent, and year
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                managers = ["All"] + sorted(self.df['Manager'].unique().tolist())
-                selected_managers = st.multiselect("Select Manager(s)", managers, default=["All"], key=f"{prefix}_managers")
-                if "All" in selected_managers:
-                    selected_managers = managers[1:]  # Select all managers if "All" is selected
+                managers = sorted(self.df['Manager'].unique().tolist())
+                selected_managers = st.multiselect("Select Manager(s)", managers, key=f"{prefix}_managers")
 
             with col2:
-                opponents = ["All"] + sorted(self.df['opponent'].unique().tolist())
-                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=["All"], key=f"{prefix}_opponents")
-                if "All" in selected_opponents:
-                    selected_opponents = opponents[1:]  # Select all opponents if "All" is selected
+                opponents = sorted(self.df['opponent'].unique().tolist())
+                selected_opponents = st.multiselect("Select Opponent(s)", opponents, key=f"{prefix}_opponents")
 
             with col3:
-                years = ["All"] + sorted(self.df['year'].astype(int).unique().tolist())
-                selected_years = st.multiselect("Select Year(s)", years, default=["All"], key=f"{prefix}_years")
-                if "All" in selected_years:
-                    selected_years = years[1:]  # Select all years if "All" is selected
+                years = sorted(self.df['year'].astype(int).unique().tolist())
+                selected_years = st.multiselect("Select Year(s)", years, key=f"{prefix}_years")
 
             # Checkboxes for game types
             col4, col5, col6 = st.columns([1, 1, 1])
@@ -60,7 +55,7 @@ class CareerMatchupOverviewViewer:
             # Filter the DataFrame based on selected managers, opponents, years, and game types
             filtered_df = self.filter_data(self.df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats"]
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats", "Head-to-Head"]
             tabs = st.tabs(tab_names)
 
             for i, tab_name in enumerate(tab_names):
@@ -79,6 +74,9 @@ class CareerMatchupOverviewViewer:
                         viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Optimal Stats":
                         display_career_optimal_lineup(self.player_df, filtered_df)
+                    elif tab_name == "Head-to-Head":
+                        head_to_head_viewer = CareerHeadToHeadViewer(filtered_df)
+                        head_to_head_viewer.display()
 
             st.subheader("Summary Data")
             total_games = len(filtered_df)
