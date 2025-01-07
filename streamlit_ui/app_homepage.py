@@ -35,7 +35,7 @@ def main():
 
     if df_dict:
         # Create tabs
-        tab_names = ["Hall of Fame", "Matchup Data", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Keeper"]
+        tab_names = ["Hall of Fame", "Matchup Data", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Keeper", "Download as Excel"]
         tabs = st.tabs(tab_names)
 
         # Display the content based on the selected tab
@@ -113,6 +113,14 @@ def main():
                         keeper_data_viewer.display()
                     else:
                         st.error("Keeper data not found.")
+                elif tab_name == "Download as Excel":
+                    st.header("Download Data as Excel")
+                    if st.button("Download"):
+                        output_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.xlsx')
+                        with pd.ExcelWriter(output_path) as writer:
+                            for key, df in df_dict.items():
+                                df.to_excel(writer, sheet_name=key, index=False)
+                        st.success(f"Data has been downloaded to {output_path}")
 
 if __name__ == "__main__":
     main()
