@@ -3,6 +3,10 @@ import pandas as pd
 from .matchups.weekly_matchup_overview import WeeklyMatchupDataViewer
 
 class VsOneOpponentViewer(WeeklyMatchupDataViewer):
+    def __init__(self, matchup_data_df, player_data_df):
+        super().__init__(matchup_data_df, player_data_df)
+        self.df = matchup_data_df
+
     def display(self):
         st.subheader("Vs. One Opponent Simulation")
 

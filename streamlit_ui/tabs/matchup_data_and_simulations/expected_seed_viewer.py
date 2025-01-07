@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from .shuffle_scores_and_schedules.shuffle_schedule import shuffle_schedule
+from .matchups.weekly_matchup_overview import WeeklyMatchupDataViewer  # Add this import
 
 @st.cache_data
 def calculate_playoff_seed(df):
@@ -22,9 +23,10 @@ def perform_shuffle_and_seed(filtered_df):
     shuffled_df = calculate_playoff_seed(shuffled_df)
     return shuffled_df
 
-class ExpectedSeedViewer:
-    def __init__(self, df):
-        self.df = df
+class ExpectedSeedViewer(WeeklyMatchupDataViewer):
+    def __init__(self, matchup_data_df, player_data_df):
+        super().__init__(matchup_data_df, player_data_df)
+        self.df = matchup_data_df
 
     def display(self):
         st.subheader("Expected Seed Simulation")

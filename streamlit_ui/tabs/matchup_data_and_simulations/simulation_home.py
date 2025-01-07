@@ -8,8 +8,9 @@ from .expected_record_viewer import ExpectedRecordViewer
 from .tweak_scoring_viewer import TweakScoringViewer
 
 class SimulationDataViewer:
-    def __init__(self, df):
-        self.df = df
+    def __init__(self, matchup_data_df, player_data_df):
+        self.matchup_data_df = matchup_data_df
+        self.player_data_df = player_data_df
 
     def display(self):
         # Add dropdown for selecting simulation type with left-aligned narrower width
@@ -20,22 +21,22 @@ class SimulationDataViewer:
                 "Vs. One Opponent", "Expected Seed", "Expected Record", "Tweak Scoring", "Draft Optimizer"
             ], key="simulation_type_dropdown")
 
-        if simulation_type and self.df is not None:
+        if simulation_type and self.matchup_data_df is not None:
             viewer = None
             if simulation_type == "Gavi Stat":
-                viewer = GaviStatViewer(self.df)
+                viewer = GaviStatViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Opponent Gavi Stat":
-                viewer = OpponentGaviStatViewer(self.df)
+                viewer = OpponentGaviStatViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Everyone's Schedule":
-                viewer = EveryonesScheduleViewer(self.df)
+                viewer = EveryonesScheduleViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Vs. One Opponent":
-                viewer = VsOneOpponentViewer(self.df)
+                viewer = VsOneOpponentViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Expected Seed":
-                viewer = ExpectedSeedViewer(self.df)
+                viewer = ExpectedSeedViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Expected Record":
-                viewer = ExpectedRecordViewer(self.df)
+                viewer = ExpectedRecordViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Tweak Scoring":
-                viewer = TweakScoringViewer(self.df)
+                viewer = TweakScoringViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Draft Optimizer":
                 st.query_params.update({"tab": "Draft History", "sub_tab": "Draft Optimizer"})
 
@@ -44,7 +45,7 @@ class SimulationDataViewer:
         else:
             st.write("No data available")
 
-def display_simulations_viewer(matchup_data_df):
-    # Instantiate the SimulationDataViewer without loading data
-    simulation_data_viewer = SimulationDataViewer(matchup_data_df)
+def display_simulations_viewer(matchup_data_df, player_data_df):
+    # Instantiate the SimulationDataViewer with the required data
+    simulation_data_viewer = SimulationDataViewer(matchup_data_df, player_data_df)
     simulation_data_viewer.display()

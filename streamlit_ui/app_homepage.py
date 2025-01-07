@@ -35,7 +35,7 @@ def main():
 
     if df_dict:
         # Create tabs
-        tab_names = ["Hall of Fame", "Matchup Data", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Keeper", "Download as Excel"]
+        tab_names = ["Hall of Fame", "Matchups", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Keeper", "Downloads"]
         tabs = st.tabs(tab_names)
 
         # Display the content based on the selected tab
@@ -44,7 +44,7 @@ def main():
                 if tab_name == "Hall of Fame":
                     hall_of_fame_viewer = HallOfFameViewer(df_dict)
                     hall_of_fame_viewer.display()
-                elif tab_name == "Matchup Data":
+                elif tab_name == "Matchups":
                     sub_tab_names = ["Weekly", "Seasons", "Career"]
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):
@@ -99,8 +99,9 @@ def main():
                 elif tab_name == "Simulations":
                     st.header("Simulations")
                     simulation_data = df_dict.get("Matchup Data")
-                    if simulation_data is not None:
-                        display_simulations_viewer(simulation_data)
+                    player_data = df_dict.get("Player Data")
+                    if simulation_data is not None and player_data is not None:
+                        display_simulations_viewer(simulation_data, player_data)
                     else:
                         st.error("Simulation data not found.")
                 elif tab_name == "Keeper":
@@ -113,7 +114,7 @@ def main():
                         keeper_data_viewer.display()
                     else:
                         st.error("Keeper data not found.")
-                elif tab_name == "Download as Excel":
+                elif tab_name == "Downloads":
                     st.header("Download Data as Excel")
                     if st.button("Download"):
                         output_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.xlsx')

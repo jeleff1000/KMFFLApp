@@ -4,9 +4,10 @@ from .shuffle_scores_and_schedules.shuffle_scores import calculate_std_dev, twea
 from .shuffle_scores_and_schedules.shuffle_schedule import shuffle_schedule
 import numpy as np  # Add this import statement
 
-class TweakScoringViewer:
-    def __init__(self, df):
-        self.df = df
+class TweakScoringViewer(WeeklyMatchupDataViewer):
+    def __init__(self, matchup_data_df, player_data_df):
+        super().__init__(matchup_data_df, player_data_df)
+        self.df = matchup_data_df
 
     def display(self):
         if self.df is not None:

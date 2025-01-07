@@ -21,8 +21,9 @@ def perform_shuffle_and_record(filtered_df, num_weeks):
     return shuffled_df
 
 class ExpectedRecordViewer:
-    def __init__(self, df):
-        self.df = df
+    def __init__(self, matchup_data_df, player_data_df):
+        super().__init__(matchup_data_df, player_data_df)
+        self.df = matchup_data_df
 
     def display(self):
         st.subheader("Expected Record Simulation")
