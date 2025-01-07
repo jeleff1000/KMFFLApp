@@ -38,7 +38,12 @@ class SimulationDataViewer:
             elif simulation_type == "Tweak Scoring":
                 viewer = TweakScoringViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Draft Optimizer":
-                st.query_params.update({"tab": "Draft History", "sub_tab": "Draft Optimizer"})
+                st.components.v1.html("""
+                    <script>
+                        window.location.href = "/#draft-optimizer";
+                    </script>
+                """, height=0)
+                return  # Exit the function to leave the current tab
 
             if viewer:
                 viewer.display()
