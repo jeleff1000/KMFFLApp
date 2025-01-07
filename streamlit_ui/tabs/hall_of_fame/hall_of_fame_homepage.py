@@ -35,5 +35,4 @@ class HallOfFameViewer:
             st.error("Matchup Data not available")
 
     def display(self):
-        st.title("Hall of Fame")
         self.display_champions()

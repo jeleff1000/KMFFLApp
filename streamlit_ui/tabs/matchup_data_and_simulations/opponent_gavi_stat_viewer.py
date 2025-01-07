@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from .matchups.weekly_matchup_overview import WeeklyMatchupDataViewer
+from .matchups.weekly.weekly_matchup_overview import WeeklyMatchupDataViewer
 
 class OpponentGaviStatViewer(WeeklyMatchupDataViewer):
     def __init__(self, matchup_data_df, player_data_df):

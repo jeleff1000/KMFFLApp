@@ -1,5 +1,5 @@
 import streamlit as st
-from .matchups.weekly_matchup_overview import WeeklyMatchupDataViewer
+from .matchups.weekly.weekly_matchup_overview import WeeklyMatchupDataViewer
 from .shuffle_scores_and_schedules.shuffle_scores import calculate_std_dev, tweak_scores, calculate_playoff_seed
 from .shuffle_scores_and_schedules.shuffle_schedule import shuffle_schedule
 import numpy as np  # Add this import statement

@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor
 from .shuffle_scores_and_schedules.shuffle_schedule import shuffle_schedule
-from .matchups.weekly_matchup_overview import WeeklyMatchupDataViewer  # Add this import
+from .matchups.weekly.weekly_matchup_overview import WeeklyMatchupDataViewer  # Add this import
 
 @st.cache_data
 def calculate_playoff_seed(df):
