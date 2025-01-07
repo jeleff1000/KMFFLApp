@@ -49,46 +49,38 @@ def main():
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):
                         with sub_tabs[j]:
-                            if sub_tab_name == "Weekly":
-                                weekly_matchup_data = df_dict.get("Matchup Data")
-                                if weekly_matchup_data is not None:
-                                    matchup_data_viewer = WeeklyMatchupDataViewer(weekly_matchup_data)
+                            matchup_data = df_dict.get("Matchup Data")
+                            player_data = df_dict.get("Player Data")
+                            if matchup_data is not None and player_data is not None:
+                                if sub_tab_name == "Weekly":
+                                    matchup_data_viewer = WeeklyMatchupDataViewer(matchup_data, player_data)
                                     matchup_data_viewer.display(prefix="weekly_matchup_data")
-                                else:
-                                    st.error("Weekly Matchup Data not found.")
-                            elif sub_tab_name == "Seasons":
-                                season_matchup_data = df_dict.get("Matchup Data")
-                                if season_matchup_data is not None:
-                                    matchup_data_viewer = SeasonMatchupOverviewViewer(season_matchup_data)
+                                elif sub_tab_name == "Seasons":
+                                    matchup_data_viewer = SeasonMatchupOverviewViewer(matchup_data, player_data)
                                     matchup_data_viewer.display(prefix="season_matchup_data")
-                                else:
-                                    st.error("Season Matchup Data not found.")
-                            elif sub_tab_name == "Career":
-                                career_matchup_data = df_dict.get("Matchup Data")
-                                if career_matchup_data is not None:
-                                    career_matchup_viewer = CareerMatchupOverviewViewer(career_matchup_data)
+                                elif sub_tab_name == "Career":
+                                    career_matchup_viewer = CareerMatchupOverviewViewer(matchup_data, player_data)
                                     career_matchup_viewer.display(prefix="career_matchup_data")
-                                else:
-                                    st.error("Career Matchup Data not found.")
+                            else:
+                                st.error(f"{sub_tab_name} Matchup Data or Player Data not found.")
                 elif tab_name == "Player Data":
                     sub_tab_names = ["Weekly", "Seasons", "Career"]
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):
-                        with sub_tabs[j]:
-                            player_data = df_dict.get("Player Data")
-                            matchup_data = df_dict.get("Matchup Data")
-                            if player_data is not None and matchup_data is not None:
-                                if sub_tab_name == "Weekly":
-                                    player_data_viewer = StreamlitWeeklyPlayerDataViewer(player_data, matchup_data)
-                                    player_data_viewer.display()
-                                elif sub_tab_name == "Seasons":
-                                    player_data_viewer = StreamlitSeasonPlayerDataViewer(player_data, matchup_data)
-                                    player_data_viewer.display()
-                                elif sub_tab_name == "Career":
-                                    player_data_viewer = StreamlitCareerPlayerDataViewer(player_data, matchup_data)
-                                    player_data_viewer.display()
-                            else:
-                                st.error(f"{sub_tab_name} Player Data or Matchup Data not found.")
+                        player_data = df_dict.get("Player Data")
+                        matchup_data = df_dict.get("Matchup Data")
+                        if player_data is not None and matchup_data is not None:
+                            if sub_tab_name == "Weekly":
+                                player_data_viewer = StreamlitWeeklyPlayerDataViewer(player_data, matchup_data)
+                                player_data_viewer.display()
+                            elif sub_tab_name == "Season":
+                                player_data_viewer = StreamlitSeasonPlayerDataViewer(player_data, matchup_data)
+                                player_data_viewer.display()
+                            elif sub_tab_name == "Career":
+                                player_data_viewer = StreamlitCareerPlayerDataViewer(player_data, matchup_data)
+                                player_data_viewer.display()
+                        else:
+                            st.error(f"{sub_tab_name} Player Data or Matchup Data not found.")
                 elif tab_name == "Draft History":
                     display_draft_data_overview(df_dict)
                 elif tab_name == "Transactions":
@@ -120,6 +112,7 @@ def main():
                         keeper_data_viewer.display()
                     else:
                         st.error("Keeper data not found.")
+
 
 if __name__ == "__main__":
     main()

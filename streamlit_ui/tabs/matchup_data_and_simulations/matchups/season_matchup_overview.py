@@ -3,10 +3,12 @@ import pandas as pd
 from .season_advanced_stats import SeasonAdvancedStatsViewer
 from .season_matchup_stats import SeasonMatchupStatsViewer
 from .season_projected_stats import SeasonProjectedStatsViewer
+from .season_optimal_lineups import display_season_optimal_lineup
 
 class SeasonMatchupOverviewViewer:
-    def __init__(self, df):
+    def __init__(self, df, player_df):
         self.df = df
+        self.player_df = player_df
 
     def filter_data(self, df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years):
         filtered_df = df.copy()
@@ -61,18 +63,22 @@ class SeasonMatchupOverviewViewer:
             # Filter the DataFrame based on selected managers, opponents, years, and game types
             filtered_df = self.filter_data(self.df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats"]
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats"]
             tabs = st.tabs(tab_names)
 
             for i, tab_name in enumerate(tab_names):
                 with tabs[i]:
                     if tab_name == "Matchup Stats":
                         viewer = SeasonMatchupStatsViewer(filtered_df)
+                        viewer.display(prefix=f"{prefix}_matchup_stats")
                     elif tab_name == "Advanced Stats":
                         viewer = SeasonAdvancedStatsViewer(filtered_df)
+                        viewer.display(prefix=f"{prefix}_advanced_stats")
                     elif tab_name == "Projected Stats":
                         viewer = SeasonProjectedStatsViewer(filtered_df)
-                    viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
+                        viewer.display(prefix=f"{prefix}_projected_stats")
+                    elif tab_name == "Optimal Stats":
+                        display_season_optimal_lineup(self.player_df, filtered_df)
 
             st.subheader("Summary Data")
             total_games = len(filtered_df)

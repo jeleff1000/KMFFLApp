@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
+from .career_optimal_lineups import display_career_optimal_lineup
 
 class CareerMatchupOverviewViewer:
-    def __init__(self, df):
+    def __init__(self, df, player_df):
         self.df = df
+        self.player_df = player_df
 
     def filter_data(self, df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years):
         filtered_df = df.copy()
@@ -58,7 +60,7 @@ class CareerMatchupOverviewViewer:
             # Filter the DataFrame based on selected managers, opponents, years, and game types
             filtered_df = self.filter_data(self.df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats"]
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Lineups"]
             tabs = st.tabs(tab_names)
 
             for i, tab_name in enumerate(tab_names):
@@ -66,13 +68,17 @@ class CareerMatchupOverviewViewer:
                     if tab_name == "Matchup Stats":
                         from .career_matchup_stats import CareerMatchupStatsViewer
                         viewer = CareerMatchupStatsViewer(filtered_df)
+                        viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Advanced Stats":
                         from .career_advanced_stats import SeasonAdvancedStatsViewer as CareerAdvancedStatsViewer
                         viewer = CareerAdvancedStatsViewer(filtered_df)
+                        viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Projected Stats":
                         from .career_projected_stats import SeasonProjectedStatsViewer as CareerProjectedStatsViewer
                         viewer = CareerProjectedStatsViewer(filtered_df)
-                    viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
+                        viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
+                    elif tab_name == "Optimal Lineups":
+                        display_career_optimal_lineup(self.player_df, filtered_df)
 
             st.subheader("Summary Data")
             total_games = len(filtered_df)
@@ -82,4 +88,3 @@ class CareerMatchupOverviewViewer:
             st.write(f"Total Games: {total_games} | Avg Team Points: {avg_team_points:.2f} | Avg Opponent Points: {avg_opponent_points:.2f}")
         else:
             st.write("No data available")
-
