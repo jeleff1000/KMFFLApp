@@ -12,7 +12,9 @@ class StreamlitWeeklyPlayerDataViewer:
     def get_unique_values(self, column, filters):
         filtered_data = self.apply_filters(filters)
         if column in filtered_data.columns:
-            return sorted(list(filtered_data[column].unique()))
+            unique_values = filtered_data[column].dropna().unique()
+            unique_values = [str(value) for value in unique_values]  # Convert all values to strings
+            return sorted(unique_values)
         else:
             return []
 
