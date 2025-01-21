@@ -62,7 +62,7 @@ class VsOneOpponentViewer(WeeklyMatchupDataViewer):
 
         # Combine win and loss columns for each opponent
         for original, updated in opponents.items():
-            result_df[f"Vs<br>{updated}"] = result_df[f"W vs {original}"].astype(str) + "-" + result_df[f"L vs {original}"].astype(str)
+            result_df[f"Vs<br>{updated}"] = result_df[f"W vs {original}"].astype(int).astype(str) + "-" + result_df[f"L vs {original}"].astype(int).astype(str)
             result_df = result_df.drop(columns=[f"W vs {original}", f"L vs {original}"])
 
         # Keep only the combined "Vs" columns
@@ -73,7 +73,7 @@ class VsOneOpponentViewer(WeeklyMatchupDataViewer):
 
         # Create a second table showing win-loss for each manager
         win_loss_df = filtered_df.groupby('Manager').agg({'win': 'sum', 'loss': 'sum'}).reset_index()
-        win_loss_df['Win-Loss'] = win_loss_df['win'].astype(str) + "-" + win_loss_df['loss'].astype(str)
+        win_loss_df['Win-Loss'] = win_loss_df['win'].astype(int).astype(str) + "-" + win_loss_df['loss'].astype(int).astype(str)
         win_loss_df = win_loss_df.set_index('Manager')
 
         # Display the win-loss table

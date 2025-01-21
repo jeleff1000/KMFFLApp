@@ -1,4 +1,3 @@
-# streamlit_ui/tabs/transactions/weekly_add_drop.py
 import pandas as pd
 import streamlit as st
 
@@ -9,6 +8,10 @@ def display_weekly_add_drop(transaction_df, player_df, keys=None, include_search
     # Ensure nickname column has no missing values before merge
     transaction_df['nickname'].fillna('Unknown', inplace=True)
 
+    # Ensure the 'year' column in both DataFrames is of the same type
+    transaction_df['year'] = transaction_df['year'].astype(int)
+    player_df['season'] = player_df['season'].astype(int)
+
     # Merge the dataframes for Weekly Add/Drop using left join, selecting only necessary columns
     merged_df = pd.merge(transaction_df[['transaction_id', 'name', 'week', 'year', 'transaction_type', 'faab_bid', 'nickname']],
                          player_df[['player', 'week', 'season', 'rolling_point_total', 'position']],
@@ -18,26 +21,32 @@ def display_weekly_add_drop(transaction_df, player_df, keys=None, include_search
     merged_df['nickname'].fillna('Unknown', inplace=True)
 
     # Calculate points for the transaction week
-    points_transaction_week = player_df.set_index(['player', 'season', 'week'])['rolling_point_total']
-    merged_df['points_transaction_week'] = merged_df.set_index(['name', 'year', 'week']).index.map(points_transaction_week).fillna(0).values
+    points_transaction_week = player_df.groupby(['player', 'season', 'week'])['rolling_point_total'].sum()
+    merged_df['points_transaction_week'] = merged_df.set_index(['name', 'year', 'week']).index.map(
+        points_transaction_week).fillna(0).values
 
-    # Find the maximum week up to week 17 for each player and season
-    max_week_up_to_17 = player_df[player_df['week'] <= 17].groupby(['player', 'season'])['week'].idxmax()
+    # Find the maximum week up to week 16 for years 2020 and earlier, and up to week 17 for years 2021 and later
+    max_week_up_to_16 = player_df[(player_df['week'] <= 16) & (player_df['season'] <= 2020)].groupby(['player', 'season'])['week'].idxmax()
+    max_week_up_to_17 = player_df[(player_df['week'] <= 17) & (player_df['season'] >= 2021)].groupby(['player', 'season'])['week'].idxmax()
+    points_max_week_up_to_16 = player_df.loc[max_week_up_to_16].set_index(['player', 'season'])['rolling_point_total']
     points_max_week_up_to_17 = player_df.loc[max_week_up_to_17].set_index(['player', 'season'])['rolling_point_total']
 
-    # Map the points for the maximum week up to week 17
-    merged_df['points_week_17'] = merged_df.set_index(['name', 'year']).index.map(points_max_week_up_to_17).fillna(0).values
+    # Map the points for the maximum week up to week 16 or 17 based on the year
+    merged_df['points_week_max'] = merged_df.apply(
+        lambda row: points_max_week_up_to_16.get((row['name'], row['year']), 0) if row['year'] <= 2020 else points_max_week_up_to_17.get((row['name'], row['year']), 0),
+        axis=1
+    )
 
-    # Calculate the difference between the maximum week up to week 17 and the transaction week
-    merged_df['points_week_17'] = merged_df['points_week_17'] - merged_df['points_transaction_week']
+    # Calculate the difference between the maximum week and the transaction week
+    merged_df['points_week_max'] = merged_df['points_week_max'] - merged_df['points_transaction_week']
 
     # Create new columns based on transaction type
     merged_df['added_player'] = merged_df['name'].where(merged_df['transaction_type'] == 'add')
     merged_df['dropped_player'] = merged_df['name'].where(merged_df['transaction_type'] == 'drop')
     merged_df['add_points_transaction_week'] = merged_df['points_transaction_week'].where(merged_df['transaction_type'] == 'add')
-    merged_df['add_points_week_17'] = merged_df['points_week_17'].where(merged_df['transaction_type'] == 'add')
+    merged_df['add_points_week_max'] = merged_df['points_week_max'].where(merged_df['transaction_type'] == 'add')
     merged_df['drop_points_transaction_week'] = merged_df['points_transaction_week'].where(merged_df['transaction_type'] == 'drop')
-    merged_df['drop_points_week_17'] = merged_df['points_week_17'].where(merged_df['transaction_type'] == 'drop')
+    merged_df['drop_points_week_max'] = merged_df['points_week_max'].where(merged_df['transaction_type'] == 'drop')
     merged_df['added_player_position'] = merged_df['position'].where(merged_df['transaction_type'] == 'add')
     merged_df['dropped_player_position'] = merged_df['position'].where(merged_df['transaction_type'] == 'drop')
 
@@ -50,15 +59,15 @@ def display_weekly_add_drop(transaction_df, player_df, keys=None, include_search
         'added_player': 'first',
         'dropped_player': 'first',
         'add_points_transaction_week': 'first',
-        'add_points_week_17': 'first',
+        'add_points_week_max': 'first',
         'drop_points_transaction_week': 'first',
-        'drop_points_week_17': 'first',
+        'drop_points_week_max': 'first',
         'added_player_position': 'first',
         'dropped_player_position': 'first'
     }).reset_index()
 
     # Calculate points gained
-    aggregated_df['points_gained'] = aggregated_df['add_points_week_17'] - aggregated_df['drop_points_week_17']
+    aggregated_df['points_gained'] = aggregated_df['add_points_week_max'] - aggregated_df['drop_points_week_max']
 
     # Convert year to integer and then to string without formatting
     aggregated_df['year'] = aggregated_df['year'].astype(int).astype(str)
@@ -70,8 +79,8 @@ def display_weekly_add_drop(transaction_df, player_df, keys=None, include_search
         'dropped_player_position': 'drop_pos',
         'add_points_transaction_week': 'add_pts_to_date',
         'drop_points_transaction_week': 'drop_pts_to_date',
-        'add_points_week_17': 'add_pts_ROS',
-        'drop_points_week_17': 'drop_pts_ROS',
+        'add_points_week_max': 'add_pts_ROS',
+        'drop_points_week_max': 'drop_pts_ROS',
         'nickname': 'manager'
     }, inplace=True)
 

@@ -9,11 +9,11 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
     merged_df = merged_df[merged_df['Manager'].notna()]
 
     # Keep only the specified columns
-    columns_to_keep = ['Manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_score', 'points', 'Included in optimal score', 'fantasy position', 'is_playoffs', 'is_consolation']
+    columns_to_keep = ['Manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_score', 'points', 'optimal_player', 'fantasy position', 'is_playoffs', 'is_consolation']
     filtered_df = merged_df[columns_to_keep]
 
-    # Create a new column that sums the points when Included in optimal score is 1
-    filtered_df['optimal_points_sum'] = filtered_df[filtered_df['Included in optimal score'] == 1].groupby(['Manager', 'week', 'year'])['points'].transform('sum')
+    # Create a new column that sums the points when optimal_player is 1
+    filtered_df['optimal_points_sum'] = filtered_df[filtered_df['optimal_player'] == 1].groupby(['Manager', 'week', 'year'])['points'].transform('sum')
 
     # Aggregate the data on Manager, week, and year
     aggregated_df = filtered_df.groupby(['Manager', 'week', 'year', 'opponent']).agg({

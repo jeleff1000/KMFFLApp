@@ -33,18 +33,23 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     points_transaction_week = player_df.set_index(['player', 'season', 'week'])['rolling_point_total']
     merged_df['points_transaction_week'] = merged_df.set_index(['name', 'year', 'week']).index.map(points_transaction_week).fillna(0).values
 
-    # Find the maximum week up to week 17 for each player and season
-    max_week_up_to_17 = player_df[player_df['week'] <= 17].groupby(['player', 'season'])['week'].idxmax()
+    # Find the maximum week up to week 16 for years 2020 and earlier, and up to week 17 for years 2021 and later
+    max_week_up_to_16 = player_df[(player_df['week'] <= 16) & (player_df['season'] <= 2020)].groupby(['player', 'season'])['week'].idxmax()
+    max_week_up_to_17 = player_df[(player_df['week'] <= 17) & (player_df['season'] >= 2021)].groupby(['player', 'season'])['week'].idxmax()
+    points_max_week_up_to_16 = player_df.loc[max_week_up_to_16].set_index(['player', 'season'])['rolling_point_total']
     points_max_week_up_to_17 = player_df.loc[max_week_up_to_17].set_index(['player', 'season'])['rolling_point_total']
 
-    # Map the points for the maximum week up to week 17
-    merged_df['points_week_17'] = merged_df.set_index(['name', 'year']).index.map(points_max_week_up_to_17).fillna(0).values
+    # Map the points for the maximum week up to week 16 or 17 based on the year
+    merged_df['points_week_max'] = merged_df.apply(
+        lambda row: points_max_week_up_to_16.get((row['name'], row['year']), 0) if row['year'] <= 2020 else points_max_week_up_to_17.get((row['name'], row['year']), 0),
+        axis=1
+    )
 
-    # Calculate the difference between the maximum week up to week 17 and the transaction week
-    merged_df['points_week_17'] = merged_df['points_week_17'] - merged_df['points_transaction_week']
+    # Calculate the difference between the maximum week and the transaction week
+    merged_df['points_week_max'] -= merged_df['points_transaction_week']
 
     # Calculate Rest of Season Position Rank
-    merged_df['Rest_of_Season_Rank'] = merged_df.groupby('position')['points_week_17'].rank(ascending=False, method='min')
+    merged_df['Rest_of_Season_Rank'] = merged_df.groupby('position')['points_week_max'].rank(ascending=False, method='min')
     merged_df['Rest_of_Season_Rank'] = merged_df['Rest_of_Season_Rank'].fillna(0).astype(int)
     merged_df['Rest_of_Season_Rank'] = merged_df['position'] + merged_df['Rest_of_Season_Rank'].astype(str)
 
@@ -70,7 +75,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'year': 'first',
         'name': lambda x: ', '.join(x),
         'points_transaction_week': 'sum',
-        'points_week_17': 'sum',
+        'points_week_max': 'sum',
         'Cost': 'sum',
         'Is Keeper': 'sum',
         'Rest_of_Season_Rank': lambda x: ', '.join(x.astype(str))
@@ -87,7 +92,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     traded_away_df.rename(columns={
         'name': 'traded_away_name',
         'points_transaction_week': 'traded_away_points_transaction_week',
-        'points_week_17': 'traded_away_points_week_17',
+        'points_week_max': 'traded_away_points_week_max',
         'Cost': 'traded_away_Cost',
         'Is Keeper': 'traded_away_Is Keeper',
         'Rest_of_Season_Rank': 'traded_away_Rest_of_Season_Rank'
@@ -97,7 +102,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     traded_away_aggregated_df = traded_away_df.groupby(['transaction_id', 'manager']).agg({
         'traded_away_name': lambda x: ', '.join(x),
         'traded_away_points_transaction_week': 'sum',
-        'traded_away_points_week_17': 'sum',
+        'traded_away_points_week_max': 'sum',
         'traded_away_Cost': 'sum',
         'traded_away_Is Keeper': 'sum',
         'traded_away_Rest_of_Season_Rank': lambda x: ', '.join(x.astype(str))
@@ -114,7 +119,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     final_df = final_df[final_df['manager'] != final_df['manager_away']]
 
     # Calculate points gained in trade
-    final_df['points_gained_in_trade'] = final_df['points_week_17'] - final_df['traded_away_points_week_17']
+    final_df['points_gained_in_trade'] = final_df['points_week_max'] - final_df['traded_away_points_week_max']
 
     # Add trade partner column
     final_df['trade_partner'] = final_df['manager_away']
@@ -128,7 +133,7 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
     # Specify the column order directly
     final_df = final_df[[
         'manager', 'trade_partner', 'week', 'year', 'name', 'Rest_of_Season_Rank', 'traded_away_name', 'traded_away_Rest_of_Season_Rank', 'Is Keeper', 'points_gained_in_trade', 'points_transaction_week',
-        'points_week_17',  'traded_away_points_transaction_week', 'traded_away_points_week_17', 'traded_away_Cost',
+        'points_week_max',  'traded_away_points_transaction_week', 'traded_away_points_week_max', 'traded_away_Cost',
         'traded_away_Is Keeper','Cost', 'transaction_id',
     ]]
 
@@ -146,10 +151,10 @@ def display_trade_by_trade_summary_data(transaction_df, player_df, draft_history
         'points_gained_in_trade': 'pts_gained',
         'Is Keeper': 'nxt_yr_keeper',
         'points_transaction_week': 'acqrd_pre_trade_pts',
-        'points_week_17': 'acqrd_pts_post_trade',
+        'points_week_max': 'acqrd_pts_post_trade',
         'Cost': 'next_yr_draft_price',
         'traded_away_points_transaction_week': 'traded_away_pts_pre_trade',
-        'traded_away_points_week_17': 'traded_away_pts_post_trade',
+        'traded_away_points_week_max': 'traded_away_pts_post_trade',
         'traded_away_Cost': 'traded_away_price_next_year',
         'traded_away_Is Keeper': 'traded_away_keeper',
     }, inplace=True)

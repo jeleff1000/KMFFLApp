@@ -1,5 +1,3 @@
-# streamlit_ui/app_homepage.py
-
 import os
 import streamlit as st
 import pandas as pd
@@ -14,6 +12,7 @@ from tabs.player_stats.career_player_stats_overview import StreamlitCareerPlayer
 from tabs.draft_data.draft_data_overview import display_draft_data_overview
 from tabs.injury_data.injury_overview import display_injury_overview
 from tabs.transactions.transactions_adds_drops_trades_overview import AllTransactionsViewer
+from tabs.team_names.team_names import display_team_names  # Import the new module
 
 # Function to load the pickle file
 @st.cache_data
@@ -35,7 +34,7 @@ def main():
 
     if df_dict:
         # Create tabs
-        tab_names = ["Hall of Fame", "Matchups", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Keeper", "Downloads"]
+        tab_names = ["Hall of Fame", "Matchups", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations",  "Team Names", "Keeper", "Downloads"]
         tabs = st.tabs(tab_names)
 
         # Display the content based on the selected tab
@@ -91,12 +90,15 @@ def main():
                     st.header("Keeper")
                     keeper_data = df_dict.get("Player Data")
                     draft_history = df_dict.get("Draft History")
-                    adds_data = df_dict.get("Adds")
+                    adds_data = df_dict.get("All Transactions")  # Use "All Transactions" for adds_data
                     if keeper_data is not None and draft_history is not None and adds_data is not None:
                         keeper_data_viewer = KeeperDataViewer(keeper_data, draft_history, adds_data)
                         keeper_data_viewer.display()
                     else:
                         st.error("Keeper data not found.")
+                elif tab_name == "Team Names":
+                    matchup_data = df_dict.get("Matchup Data")
+                    display_team_names(matchup_data)
                 elif tab_name == "Downloads":
                     st.header("Download Data as Excel")
                     if st.button("Download"):

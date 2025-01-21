@@ -17,6 +17,9 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
     # Remove duplicate rows in draft_history_df based on Name Full and Year
     draft_history_df.drop_duplicates(subset=['Name Full', 'Year'], inplace=True)
 
+    # Ensure the 'Year' column is of integer type
+    draft_history_df['Year'] = draft_history_df['Year'].astype(int)
+
     # Adjust the Year column in draft_history_df to be year - 1
     draft_history_df['Year'] = draft_history_df['Year'] - 1
 
@@ -41,18 +44,23 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
     merged_df['Rank_on_Transaction_Date'] = merged_df['Rank_on_Transaction_Date'].fillna(0).astype(int)
     merged_df['Rank_on_Transaction_Date'] = merged_df['position'] + merged_df['Rank_on_Transaction_Date'].astype(str)
 
-    # Find the maximum week up to week 17 for each player and season
-    max_week_up_to_17 = player_df[player_df['week'] <= 17].groupby(['player', 'season'])['week'].idxmax()
+    # Find the maximum week up to week 16 for years 2020 and earlier, and up to week 17 for years 2021 and later
+    max_week_up_to_16 = player_df[(player_df['week'] <= 16) & (player_df['season'] <= 2020)].groupby(['player', 'season'])['week'].idxmax()
+    max_week_up_to_17 = player_df[(player_df['week'] <= 17) & (player_df['season'] >= 2021)].groupby(['player', 'season'])['week'].idxmax()
+    points_max_week_up_to_16 = player_df.loc[max_week_up_to_16].set_index(['player', 'season'])['rolling_point_total']
     points_max_week_up_to_17 = player_df.loc[max_week_up_to_17].set_index(['player', 'season'])['rolling_point_total']
 
-    # Map the points for the maximum week up to week 17
-    merged_df['points_week_17'] = merged_df.set_index(['name', 'year']).index.map(points_max_week_up_to_17).fillna(0).values
+    # Map the points for the maximum week up to week 16 or 17 based on the year
+    merged_df['points_week_max'] = merged_df.apply(
+        lambda row: points_max_week_up_to_16.get((row['name'], row['year']), 0) if row['year'] <= 2020 else points_max_week_up_to_17.get((row['name'], row['year']), 0),
+        axis=1
+    )
 
-    # Calculate the difference between the maximum week up to week 17 and the transaction week
-    merged_df['points_week_17'] = merged_df['points_week_17'] - merged_df['points_transaction_week']
+    # Calculate the difference between the maximum week and the transaction week
+    merged_df['points_week_max'] -= merged_df['points_transaction_week']
 
     # Calculate Rest of Season Position Rank
-    merged_df['Rest_of_Season_Rank'] = merged_df.groupby('position')['points_week_17'].rank(ascending=False, method='min')
+    merged_df['Rest_of_Season_Rank'] = merged_df.groupby('position')['points_week_max'].rank(ascending=False, method='min')
     merged_df['Rest_of_Season_Rank'] = merged_df['Rest_of_Season_Rank'].fillna(0).astype(int)
     merged_df['Rest_of_Season_Rank'] = merged_df['position'] + merged_df['Rest_of_Season_Rank'].astype(str)
 
@@ -84,7 +92,7 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
 
     # Specify the column order directly
     merged_df = merged_df[[
-        'transaction_id', 'manager', 'week', 'year', 'name', 'position', 'points_transaction_week', 'Rank_on_Transaction_Date', 'points_week_17', 'Rest_of_Season_Rank', 'Change_in_Rank', 'Cost', 'Is Keeper'
+        'transaction_id', 'manager', 'week', 'year', 'name', 'position', 'points_transaction_week', 'Rank_on_Transaction_Date', 'points_week_max', 'Rest_of_Season_Rank', 'Change_in_Rank', 'Cost', 'Is Keeper'
     ]]
 
     # Add search bars in rows

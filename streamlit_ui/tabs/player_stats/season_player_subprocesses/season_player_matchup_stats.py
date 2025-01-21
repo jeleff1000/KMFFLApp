@@ -13,8 +13,8 @@ class CombinedMatchupStatsViewer:
         # Add 'started' column
         merged_data['started'] = ~merged_data['fantasy position'].isin(['BN', 'IR'])
 
-        # Convert 'Included in optimal score' to boolean
-        merged_data['Included in optimal score'] = merged_data['Included in optimal score'] == 1
+        # Convert 'optimal_player' to boolean
+        merged_data['optimal_player'] = merged_data['optimal_player'] == 1
 
         # Aggregate data by player, position, and season
         agg_funcs = {
@@ -23,7 +23,7 @@ class CombinedMatchupStatsViewer:
             'win': 'sum',
             'loss': 'sum',
             'started': 'sum',
-            'Included in optimal score': 'sum',
+            'optimal_player': 'sum',
             'quarterfinal': 'sum',
             'semifinal': 'sum',
             'championship': 'sum',
@@ -75,5 +75,5 @@ class CombinedMatchupStatsViewer:
         aggregated_data['Team_Made_Playoffs'] = aggregated_data['Team_Made_Playoffs'].astype(bool)
 
         # Select and display the required columns
-        display_df = aggregated_data[['player', 'position', 'Manager', 'season', 'points', 'team_points', 'win', 'loss', 'started', 'Included in optimal score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check', 'unique_manager_count']]
+        display_df = aggregated_data[['player', 'position', 'Manager', 'season', 'points', 'team_points', 'win', 'loss', 'started', 'optimal_player', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check', 'unique_manager_count']]
         st.dataframe(display_df, hide_index=True)

@@ -13,8 +13,8 @@ class CombinedMatchupStatsViewer:
         # Add 'started' column
         merged_data['started'] = ~merged_data['fantasy position'].isin(['BN', 'IR'])
 
-        # Convert 'Included in optimal score' to boolean
-        merged_data['Included in optimal score'] = merged_data['Included in optimal score'] == 1
+        # Convert 'optimal_player' to boolean
+        merged_data['optimal_player'] = merged_data['optimal_player'] == 1
 
         # Add a new column to check if both championship and win are 1
         merged_data['championship_win'] = (merged_data['championship'] == 1) & (merged_data['win'] == 1)
@@ -26,7 +26,7 @@ class CombinedMatchupStatsViewer:
             'win': 'sum',
             'loss': 'sum',
             'started': 'sum',
-            'Included in optimal score': 'sum',
+            'optimal_player': 'sum',
             'quarterfinal': 'sum',
             'semifinal': 'sum',
             'championship': 'sum',
@@ -44,7 +44,7 @@ class CombinedMatchupStatsViewer:
             'win': 'sum',
             'loss': 'sum',
             'started': 'sum',
-            'Included in optimal score': 'sum',
+            'optimal_player': 'sum',
             'quarterfinal': 'sum',
             'semifinal': 'sum',
             'championship': 'sum',
@@ -76,7 +76,7 @@ class CombinedMatchupStatsViewer:
             aggregated_data = pd.merge(aggregated_data, unique_years, on='player', how='left')
 
             # Divide specific stats by the number of unique week_seasons
-            week_season_columns = ['points', 'team_points', 'win', 'loss', 'started', 'Included in optimal score']
+            week_season_columns = ['points', 'team_points', 'win', 'loss', 'started', 'optimal_player']
             for col in week_season_columns:
                 aggregated_data[col] = aggregated_data[col] / aggregated_data['unique_week_seasons']
                 aggregated_data[col] = aggregated_data[col].round(2)
@@ -97,5 +97,5 @@ class CombinedMatchupStatsViewer:
         aggregated_data['Team_Made_Playoffs'] = aggregated_data['is_playoffs']
 
         # Select and display the required columns
-        display_df = aggregated_data[['player', 'position', 'points', 'team_points', 'win', 'loss', 'started', 'Included in optimal score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'championship_win', 'unique_manager_count']]
+        display_df = aggregated_data[['player', 'position', 'points', 'team_points', 'win', 'loss', 'started', 'optimal_player', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'championship_win', 'unique_manager_count']]
         st.dataframe(display_df, hide_index=True)

@@ -13,13 +13,13 @@ class CombinedMatchupStatsViewer:
         # Add 'started' column
         merged_data['started'] = ~merged_data['fantasy position'].isin(['BN', 'IR'])
 
-        # Convert 'Included in optimal score' to boolean
-        merged_data['Included in optimal score'] = merged_data['Included in optimal score'] == 1
+        # Convert 'optimal_player' to boolean
+        merged_data['optimal_player'] = merged_data['optimal_player'] == 1
 
         if 'win' in merged_data.columns:
             merged_data['win'] = merged_data['win'] == 1
             merged_data['is_playoffs_check'] = merged_data['is_playoffs'] == 1
-            display_df = merged_data[['player', 'points', 'Manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'win', 'is_playoffs_check', 'started', 'Included in optimal score']]
+            display_df = merged_data[['player', 'points', 'Manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'win', 'is_playoffs_check', 'started', 'optimal_player']]
             display_df['year'] = display_df['year'].astype(str)
             display_df = display_df.sort_values(by=['year', 'week']).reset_index(drop=True)
             st.dataframe(display_df, hide_index=True)
