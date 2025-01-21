@@ -13,8 +13,12 @@ class StreamlitWeeklyPlayerDataViewer:
         filtered_data = self.apply_filters(filters)
         if column in filtered_data.columns:
             unique_values = filtered_data[column].dropna().unique()
-            unique_values = [str(value) for value in unique_values]  # Convert all values to strings
-            return sorted(unique_values)
+            if column == "week":
+                unique_values = sorted(unique_values, key=lambda x: float(x))  # Sort weeks numerically
+            else:
+                unique_values = [str(value) for value in unique_values]  # Convert all values to strings
+                unique_values = sorted(unique_values)
+            return unique_values
         else:
             return []
 
