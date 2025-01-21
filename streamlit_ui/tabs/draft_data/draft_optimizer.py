@@ -159,6 +159,9 @@ def display_draft_optimizer(draft_history, player_data):
         avg_position_counts = position_counts.groupby('Primary Position')['Count'].mean().reset_index(name='Average Count')
         avg_ppg_data = avg_ppg_data.merge(avg_position_counts, on='Primary Position', how='left')
 
+        # Drop the columns 'Cost Bucket' and 'Average Count'
+        avg_ppg_data = avg_ppg_data.drop(columns=['Cost Bucket', 'Average Count'])
+
         # Prepare data for linear programming
         costs = avg_ppg_data['Average Cost'].values
         ppgs = avg_ppg_data['Median PPG'].values

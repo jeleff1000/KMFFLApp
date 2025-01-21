@@ -48,6 +48,35 @@ class KeeperDataViewer:
 
         return merged_df
 
+    def get_next_season_points(self, playeryear):
+        try:
+            player, year = playeryear[:-2], int(playeryear[-2:])
+            next_playeryear = f"{player}{year + 1:02d}"
+            if next_playeryear in self.player_df.index:
+                next_season_points = self.player_df.loc[next_playeryear, 'rolling_point_total']
+                if isinstance(next_season_points, pd.Series):
+                    return next_season_points.max() if not next_season_points.isna().any() else 0
+                else:
+                    return next_season_points if not pd.isna(next_season_points) else 0
+        except Exception:
+            return 0
+
+    def get_next_season_avg_points(self, playeryear):
+        try:
+            player, year = playeryear[:-2], int(playeryear[-2:])
+            next_playeryear = f"{player}{year + 1:02d}"
+            if next_playeryear in self.player_df.index:
+                next_season_points = self.player_df.loc[next_playeryear]
+                if isinstance(next_season_points, pd.Series):
+                    if 'points' in next_season_points:
+                        next_season_points = next_season_points[next_season_points['points'] > 0]['points']
+                        return round(next_season_points.mean(), 2) if not next_season_points.empty else 0
+                elif isinstance(next_season_points, pd.DataFrame):
+                    next_season_points = next_season_points[next_season_points['points'] > 0]['points']
+                    return round(next_season_points.mean(), 2) if not next_season_points.empty else 0
+        except Exception:
+            return 0
+
     def display(self):
         if 'week' in self.player_df.columns and 'season' in self.player_df.columns:
             final_week_df = self.filter_final_week_data(self.player_df)
@@ -92,25 +121,8 @@ class KeeperDataViewer:
                 merged_df['Avg Points This Year'] = merged_df['playeryear'].map(calculate_avg_points)
 
                 # Calculate Total Points Next Year using rolling_point_total
-                def get_next_season_points(playeryear):
-                    player, year = playeryear[:-2], int(playeryear[-2:])
-                    next_playeryear = f"{player}{year + 1:02d}"
-                    if next_playeryear in self.player_df.index:
-                        next_season_points = self.player_df.loc[next_playeryear, 'rolling_point_total']
-                        return next_season_points.max() if not next_season_points.empty else 0
-                    return 0
-
-                def get_next_season_avg_points(playeryear):
-                    player, year = playeryear[:-2], int(playeryear[-2:])
-                    next_playeryear = f"{player}{year + 1:02d}"
-                    if next_playeryear in self.player_df.index:
-                        next_season_points = self.player_df.loc[next_playeryear]
-                        next_season_points = next_season_points[next_season_points['points'] > 0]['points']
-                        return round(next_season_points.mean(), 2) if not next_season_points.empty else 0
-                    return 0
-
-                merged_df['Total Points Next Year'] = merged_df['playeryear'].map(get_next_season_points)
-                merged_df['Avg Points Next Year'] = merged_df['playeryear'].map(get_next_season_avg_points)
+                merged_df['Total Points Next Year'] = merged_df['playeryear'].map(self.get_next_season_points)
+                merged_df['Avg Points Next Year'] = merged_df['playeryear'].map(self.get_next_season_avg_points)
 
                 merged_df['Keeper Price'] = merged_df.apply(
                     lambda row: int(np.ceil(max(1, (row['Cost'] * 1.5 + 7.5) if row['Is Keeper Status'] == 1 else max(
