@@ -11,7 +11,7 @@ class StreamlitSeasonPlayerDataViewer:
 
     def get_unique_values(self, column, filters):
         filtered_data = self.apply_filters(filters)
-        return list(filtered_data[column].unique())
+        return sorted(list(filtered_data[column].unique()))
 
     def apply_filters(self, filters):
         filtered_data = self.player_data
@@ -155,7 +155,7 @@ class StreamlitSeasonPlayerDataViewer:
 
         for col in td_stats:
             if col in stats_df.columns:
-                stats_df[col] = stats_df[col].astype(float).round(3)
+                stats_df[col].astype(float).round(3)
 
         # Drop the unique_weeks column
         stats_df = stats_df.drop(columns=['unique_weeks'])
