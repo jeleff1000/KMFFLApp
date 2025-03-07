@@ -26,6 +26,9 @@ class StreamlitWeeklyPlayerDataViewer:
         filtered_data = self.player_data
         for column, values in filters.items():
             if values:  # Treat empty lists as "All"
+                if column == "season":
+                    values = [str(value) for value in values]  # Convert filter values to strings
+                    filtered_data[column] = filtered_data[column].astype(str)  # Convert column values to strings
                 filtered_data = filtered_data[filtered_data[column].isin(values)]
         return filtered_data
 
