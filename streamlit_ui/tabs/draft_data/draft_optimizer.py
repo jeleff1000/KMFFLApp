@@ -143,13 +143,12 @@ def display_draft_optimizer(draft_history, player_data):
         # Assign cost buckets such that each bucket contains 3 players per season
         aggregated_data = assign_cost_buckets(aggregated_data)
 
-        # Calculate median PPG, max cost, and min cost for each cost bucket within the date range
+        # Calculate median PPG and average cost for each cost bucket within the date range
         avg_ppg_data = aggregated_data.groupby(['Primary Position', 'Cost Bucket']).agg({
             'PPG': 'median',
-            'Cost': ['mean', 'max', 'min'],
-            'points': 'sum'
+            'Cost': 'mean'
         }).reset_index()
-        avg_ppg_data.columns = ['Primary Position', 'Cost Bucket', 'Median PPG', 'Average Cost', 'Max Cost', 'Min Cost', 'Total Points']
+        avg_ppg_data.columns = ['Primary Position', 'Cost Bucket', 'Median PPG', 'Average Cost']
 
         # Round values to two decimal places
         avg_ppg_data = avg_ppg_data.round(2)
@@ -161,6 +160,9 @@ def display_draft_optimizer(draft_history, player_data):
 
         # Drop the columns 'Cost Bucket' and 'Average Count'
         avg_ppg_data = avg_ppg_data.drop(columns=['Cost Bucket', 'Average Count'])
+
+        # Reorder columns to have 'Average Cost' before 'Median PPG'
+        avg_ppg_data = avg_ppg_data[['Primary Position', 'Average Cost', 'Median PPG']]
 
         # Prepare data for linear programming
         costs = avg_ppg_data['Average Cost'].values
