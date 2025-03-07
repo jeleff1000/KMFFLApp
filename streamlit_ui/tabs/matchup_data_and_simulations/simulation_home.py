@@ -18,7 +18,7 @@ class SimulationDataViewer:
         with col1:
             simulation_type = st.selectbox("Select Simulation Type", [
                 "", "Gavi Stat", "Opponent Gavi Stat", "Everyone's Schedule",
-                "Vs. One Opponent", "Expected Seed", "Expected Record", "Tweak Scoring", "Draft Optimizer"
+                "Vs. One Opponent", "Expected Seed", "Expected Record", "Tweak Scoring"
             ], key="simulation_type_dropdown")
 
         if simulation_type and self.matchup_data_df is not None:
@@ -37,13 +37,6 @@ class SimulationDataViewer:
                 viewer = ExpectedRecordViewer(self.matchup_data_df, self.player_data_df)
             elif simulation_type == "Tweak Scoring":
                 viewer = TweakScoringViewer(self.matchup_data_df, self.player_data_df)
-            elif simulation_type == "Draft Optimizer":
-                st.components.v1.html("""
-                    <script>
-                        window.location.href = "/#draft-optimizer";
-                    </script>
-                """, height=0)
-                return  # Exit the function to leave the current tab
 
             if viewer:
                 viewer.display()
