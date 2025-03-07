@@ -57,16 +57,30 @@ class EveryonesScheduleViewer(WeeklyMatchupDataViewer):
             "Yaacov": "Yaacov's"
         }
 
-        # Group by Manager and aggregate the results
-        result_df = filtered_df.groupby('Manager').sum().reset_index()
+        # Initialize result dataframe
+        result_df = pd.DataFrame(columns=['Manager'] + [updated for updated in opponents.values()])
+        result_df['Manager'] = filtered_df['Manager'].unique()
 
-        # Combine win and loss columns for each opponent's schedule
+        # Calculate wins and losses for each manager against each opponent
         for original, updated in opponents.items():
-            result_df[updated] = result_df[f"W vs {original}'s Schedule"].astype(str) + "-" + result_df[f"L vs {original}'s Schedule"].astype(str)
-            result_df = result_df.drop(columns=[f"W vs {original}'s Schedule", f"L vs {original}'s Schedule"])
+            result_df[updated] = "0-0"
+            for manager in result_df['Manager']:
+                manager_df = filtered_df[filtered_df['Manager'] == manager]
+                opponent_df = filtered_df[filtered_df['Manager'] == original]
+                wins = 0
+                losses = 0
+                for week in manager_df['Cumulative Week'].unique():
+                    manager_week_df = manager_df[manager_df['Cumulative Week'] == week]
+                    opponent_week_df = opponent_df[opponent_df['Cumulative Week'] == week]
+                    if not manager_week_df.empty and not opponent_week_df.empty:
+                        if manager_week_df['team_points'].values[0] > opponent_week_df['opponent_score'].values[0]:
+                            wins += 1
+                        else:
+                            losses += 1
+                result_df.loc[result_df['Manager'] == manager, updated] = f"{wins}-{losses}"
 
-        # Keep only the combined columns
-        result_df = result_df[['Manager'] + [updated for updated in opponents.values()]]
+        # Sort the result dataframe by Manager column alphabetically
+        result_df = result_df.sort_values(by='Manager').reset_index(drop=True)
 
         # Highlight the cell when the schedule name and manager name match
         def highlight_matching_cells(val, manager, column):
@@ -77,4 +91,7 @@ class EveryonesScheduleViewer(WeeklyMatchupDataViewer):
         styled_df = result_df.style.apply(lambda x: [highlight_matching_cells(v, x['Manager'], col) for col, v in x.items()], axis=1)
 
         # Display the result with HTML column names
-        st.markdown(styled_df.to_html(escape=False), unsafe_allow_html=True)
+        st.markdown(styled_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+        # Display the filtered dataframe for debugging
+        #st.dataframe(filtered_df)
