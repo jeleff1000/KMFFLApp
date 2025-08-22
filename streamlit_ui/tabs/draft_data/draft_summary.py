@@ -57,7 +57,7 @@ def display_draft_summary(draft_data):
 
     # Select and display the specified columns
     columns_to_display = [
-        'Team Manager', 'Name Full', 'Primary Position', 'Round', 'Pick',
+        'Year', 'Team Manager', 'Name Full', 'Primary Position', 'Round', 'Pick',
         'Cost', 'Average Cost', 'Savings', 'Average Round', 'Average Pick', 'Percent Drafted', 'Keeper'
     ]
     st.dataframe(draft_data[columns_to_display], hide_index=True)

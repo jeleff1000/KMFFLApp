@@ -7,8 +7,18 @@ class CombinedMatchupStatsViewer:
         self.matchup_data = matchup_data
 
     def display(self, prefix):
+        # Ensure 'season' and 'year' columns have the same data type
+        self.filtered_data['season'] = self.filtered_data['season'].astype(int)
+        self.matchup_data['year'] = self.matchup_data['year'].astype(int)
+
         # Merge player data with matchup data
-        merged_data = pd.merge(self.filtered_data, self.matchup_data, left_on=['owner', 'week', 'season'], right_on=['Manager', 'week', 'year'], how='inner')
+        merged_data = pd.merge(
+            self.filtered_data,
+            self.matchup_data,
+            left_on=['owner', 'week', 'season'],
+            right_on=['Manager', 'week', 'year'],
+            how='inner'
+        )
 
         # Add 'started' column
         merged_data['started'] = ~merged_data['fantasy position'].isin(['BN', 'IR'])
@@ -19,9 +29,34 @@ class CombinedMatchupStatsViewer:
         if 'win' in merged_data.columns:
             merged_data['win'] = merged_data['win'] == 1
             merged_data['is_playoffs_check'] = merged_data['is_playoffs'] == 1
-            display_df = merged_data[['player', 'points', 'Manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'win', 'is_playoffs_check', 'started', 'optimal_player']]
+
+            # Rank players within RB and WR positions based on points
+            merged_data['position_rank'] = merged_data.groupby(
+                ['Manager', 'week', 'year', 'fantasy position']
+            )['points'].rank(ascending=False, method='first').astype(int)
+
+            # Append the rank only for RB and WR positions
+            merged_data['fantasy position'] = merged_data.apply(
+                lambda row: f"{row['fantasy position']}{row['position_rank']}"
+                if row['fantasy position'] in ['RB', 'WR'] else row['fantasy position'],
+                axis=1
+            )
+
+            # Define the unique order for fantasy positions
+            unique_position_order = ['QB', 'RB1', 'RB2', 'WR1', 'WR2', 'WR3', 'TE', 'W/R/T', 'K', 'DEF', 'BN', 'IR']
+            merged_data['fantasy position'] = pd.Categorical(
+                merged_data['fantasy position'], categories=unique_position_order, ordered=True
+            )
+
+            # Create display DataFrame
+            display_df = merged_data[
+                ['player', 'points', 'Manager', 'week', 'year', 'fantasy position', 'opponent', 'team_points',
+                 'opponent_score', 'win', 'is_playoffs_check', 'started', 'optimal_player']
+            ]
             display_df['year'] = display_df['year'].astype(str)
-            display_df = display_df.sort_values(by=['year', 'week']).reset_index(drop=True)
+            display_df = display_df.sort_values(by=['year', 'week', 'fantasy position']).reset_index(drop=True)
+
+            # Display the DataFrame in Streamlit
             st.dataframe(display_df, hide_index=True)
         else:
             st.write("The required column 'win' is not available in the data.")
