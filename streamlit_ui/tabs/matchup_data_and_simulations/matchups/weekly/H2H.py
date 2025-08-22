@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-class CombinedMatchupStatsViewer:
+class H2HViewer:
     def __init__(self, filtered_data, matchup_data):
         self.filtered_data = filtered_data
         self.matchup_data = matchup_data
