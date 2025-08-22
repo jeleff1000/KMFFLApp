@@ -110,17 +110,23 @@ class StreamlitWeeklyPlayerDataViewer:
 
             return selected_filters, filtered_data
 
+        def determine_position(filtered_data):
+            unique_positions = filtered_data['position'].unique()
+            if len(unique_positions) == 1:
+                return unique_positions[0]  # Return the single position if all rows have the same position
+            return "All"  # Default to "All" if multiple positions are present
+
         with tabs[0]:
             st.header("Basic Stats")
             filters, filtered_data = display_filters(tab_index=0)
-            position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
+            position = determine_position(filtered_data)
             basic_stats_df = get_basic_stats(filtered_data, position)
             st.dataframe(basic_stats_df, hide_index=True)
 
         with tabs[1]:
             st.header("Advanced Stats")
             filters, filtered_data = display_filters(tab_index=1)
-            position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
+            position = determine_position(filtered_data)
             advanced_stats_df = get_advanced_stats(filtered_data, position)
             st.dataframe(advanced_stats_df, hide_index=True)
 
@@ -129,8 +135,10 @@ class StreamlitWeeklyPlayerDataViewer:
             filters, filtered_data = display_filters(tab_index=2)
             # Merge player_data with matchup_data to include managerweek
             if 'managerweek' in filtered_data.columns and 'ManagerWeek' in self.matchup_data.columns:
-                merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek', right_on='ManagerWeek', how='left')
+                merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek',
+                                       right_on='ManagerWeek', how='left')
                 viewer = CombinedMatchupStatsViewer(merged_data, self.matchup_data)
                 viewer.display(prefix=f"matchup_stats_{2}")
             else:
-                st.write("The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")
+                st.write(
+                    "The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")

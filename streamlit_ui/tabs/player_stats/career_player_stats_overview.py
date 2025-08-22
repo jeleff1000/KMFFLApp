@@ -25,6 +25,12 @@ class StreamlitCareerPlayerDataViewer:
                 filtered_data = filtered_data[filtered_data[column].isin(values)]
         return filtered_data
 
+    def determine_position(self, filtered_data):
+        unique_positions = filtered_data['position'].unique()
+        if len(unique_positions) == 1:
+            return unique_positions[0]  # Return the single position if all rows have the same position
+        return "All"  # Default to "All" if multiple positions are present
+
     def display(self):
         st.title("Career Player Data Viewer")
         tabs = st.tabs(["Basic Stats", "Advanced Stats", "Matchup Stats"])
@@ -104,7 +110,7 @@ class StreamlitCareerPlayerDataViewer:
             st.header("Basic Stats")
             filters, show_per_game = display_filters(tab_index=0, tab_name="BasicStats")
             filtered_data = self.apply_filters(filters)
-            position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
+            position = self.determine_position(filtered_data)
             basic_stats_df = get_basic_stats(filtered_data, position)
             if show_per_game:
                 basic_stats_df = self.calculate_per_game_stats(basic_stats_df, filtered_data)
@@ -114,7 +120,7 @@ class StreamlitCareerPlayerDataViewer:
             st.header("Advanced Stats")
             filters, show_per_game = display_filters(tab_index=1, tab_name="AdvancedStats")
             filtered_data = self.apply_filters(filters)
-            position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
+            position = self.determine_position(filtered_data)
             advanced_stats_df = get_advanced_stats(filtered_data, position)
             if show_per_game:
                 advanced_stats_df = self.calculate_per_game_stats(advanced_stats_df, filtered_data)

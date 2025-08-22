@@ -47,8 +47,8 @@ class StreamlitSeasonPlayerDataViewer:
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_name}_{tab_index}")
             if player_search:
                 selected_filters["player"] = \
-                self.player_data[self.player_data['player'].str.contains(player_search, case=False)][
-                    'player'].unique().tolist()
+                    self.player_data[self.player_data['player'].str.contains(player_search, case=False)][
+                        'player'].unique().tolist()
             selected_filters["owner"] = owner_values
 
             # Filter out players with "No Owner" if toggle is on
@@ -104,11 +104,17 @@ class StreamlitSeasonPlayerDataViewer:
 
             return selected_filters, show_per_game
 
+        def determine_position(filtered_data):
+            unique_positions = filtered_data['position'].unique()
+            if len(unique_positions) == 1:
+                return unique_positions[0]  # Return the single position if all rows have the same position
+            return "All"  # Default to "All" if multiple positions are present
+
         with tabs[0]:
             st.header("Basic Stats")
             filters, show_per_game = display_filters(tab_index=0, tab_name="BasicStats")
             filtered_data = self.apply_filters(filters)
-            position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
+            position = determine_position(filtered_data)
             basic_stats_df = get_basic_stats(filtered_data, position)
             if show_per_game:
                 basic_stats_df = self.calculate_per_game_stats(basic_stats_df, filtered_data)
@@ -118,7 +124,7 @@ class StreamlitSeasonPlayerDataViewer:
             st.header("Advanced Stats")
             filters, show_per_game = display_filters(tab_index=1, tab_name="AdvancedStats")
             filtered_data = self.apply_filters(filters)
-            position = filters.get("position", ["All"])[0] if filters.get("position", ["All"]) else "All"
+            position = determine_position(filtered_data)
             advanced_stats_df = get_advanced_stats(filtered_data, position)
             if show_per_game:
                 advanced_stats_df = self.calculate_per_game_stats(advanced_stats_df, filtered_data)
@@ -130,12 +136,13 @@ class StreamlitSeasonPlayerDataViewer:
             filtered_data = self.apply_filters(filters)
             # Merge player_data with matchup_data to include managerweek
             if 'managerweek' in filtered_data.columns and 'ManagerWeek' in self.matchup_data.columns:
-                merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek', right_on='ManagerWeek', how='left')
+                merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek',
+                                       right_on='ManagerWeek', how='left')
                 viewer = CombinedMatchupStatsViewer(merged_data, self.matchup_data)
                 viewer.display(prefix=f"matchup_stats_{2}", show_per_game=show_per_game)
             else:
-                st.write("The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")
-
+                st.write(
+                    "The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")
     def calculate_per_game_stats(self, stats_df, filtered_data):
         # Calculate the number of unique weeks where points is not 0 for each player
         unique_weeks = filtered_data[filtered_data['points'] != 0].groupby('player')['week'].nunique().reset_index()
