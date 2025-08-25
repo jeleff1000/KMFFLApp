@@ -15,8 +15,8 @@ class CombinedMatchupStatsViewer:
         merged_data = pd.merge(
             self.filtered_data,
             self.matchup_data,
-            left_on=['owner', 'week', 'season'],
-            right_on=['Manager', 'week', 'year'],
+            left_on=['owner', 'week', 'season', 'opponent'],
+            right_on=['Manager', 'week', 'year', 'opponent'],
             how='inner'
         )
 

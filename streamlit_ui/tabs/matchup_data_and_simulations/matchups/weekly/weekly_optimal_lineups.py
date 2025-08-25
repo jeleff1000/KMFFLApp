@@ -3,7 +3,7 @@ import streamlit as st
 
 def display_weekly_optimal_lineup(matchup_df, player_df):
     # Merge player_df and matchup_df at the beginning
-    merged_df = pd.merge(player_df, matchup_df, left_on=['owner', 'week', 'season'], right_on=['Manager', 'week', 'year'], how='left')
+    merged_df = pd.merge(player_df, matchup_df, left_on=['owner', 'week', 'season', 'opponent'], right_on=['Manager', 'week', 'year', 'opponent'], how='left')
 
     # Remove rows where Manager is None
     merged_df = merged_df[merged_df['Manager'].notna()]

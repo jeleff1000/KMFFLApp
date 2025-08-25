@@ -8,7 +8,7 @@ def display_season_optimal_lineup(player_df, matchup_data):
         return
 
     # Merge player_df and matchup_data at the beginning
-    merged_df = pd.merge(player_df, matchup_data, left_on=['owner', 'week', 'season'], right_on=['Manager', 'week', 'year'], how='left')
+    merged_df = pd.merge(player_df, matchup_data, left_on=['owner', 'week', 'season', 'opponent'], right_on=['Manager', 'week', 'year', 'opponent'], how='left')
 
     # Remove rows where Manager is None
     merged_df = merged_df[merged_df['Manager'].notna()]

@@ -7,8 +7,17 @@ class CombinedMatchupStatsViewer:
         self.matchup_data = matchup_data
 
     def display(self, prefix, show_per_game=False):
-        # Merge player data with matchup data
-        merged_data = pd.merge(self.filtered_data, self.matchup_data, left_on=['owner', 'week', 'season'], right_on=['Manager', 'week', 'year'], how='inner')
+        # Ensure the 'season' column in self.filtered_data and 'year' column in self.matchup_data have the same data type
+        self.filtered_data['season'] = self.filtered_data['season'].astype(int)
+        self.matchup_data['year'] = self.matchup_data['year'].astype(int)
+
+        # Perform the merge
+        merged_data = pd.merge(
+            self.filtered_data,
+            self.matchup_data,
+            left_on=['owner', 'week', 'season'],
+            right_on=['Manager', 'week', 'year'],
+            how='inner')
 
         # Add 'started' column
         merged_data['started'] = ~merged_data['fantasy position'].isin(['BN', 'IR'])

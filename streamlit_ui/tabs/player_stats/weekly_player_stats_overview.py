@@ -118,45 +118,6 @@ class StreamlitWeeklyPlayerDataViewer:
 
             return selected_filters, filtered_data
 
-        def h2h_search():
-            st.subheader("H2H Search")
-
-            # Step 1: Select Year
-            year = st.selectbox("Select Year", self.get_unique_values("season"), key="h2h_year")
-            if not year:
-                st.warning("Please select a year to proceed.")
-                return None
-
-            # Step 2: Filter data based on the selected year
-            year_filtered_data = self.player_data[self.player_data["season"] == year]
-
-            # Step 3: Select Week
-            week = st.selectbox(
-                "Select Week",
-                sorted(year_filtered_data["week"].unique()),
-                key="h2h_week"
-            )
-
-            # Step 4: Select Matchup Name from H2HViewer
-            matchup_name = st.selectbox(
-                "Select Matchup Name",
-                sorted(self.matchup_names["Matchup Name"].unique()),
-                key="h2h_matchup_name"
-            )
-
-            # Step 5: Go Button
-            go_button = st.button("Go", key="h2h_go")
-
-            if go_button:
-                filters = {
-                    "season": [year],
-                    "week": [week],
-                    "Matchup Name": [matchup_name]
-                }
-                return self.apply_filters(filters)
-
-            return None
-
         with tabs[0]:
             st.header("Basic Stats")
             filters, filtered_data = display_filters(tab_index=0)
@@ -177,7 +138,36 @@ class StreamlitWeeklyPlayerDataViewer:
 
         with tabs[3]:
             st.header("H2H")
-            filtered_data = h2h_search()
-            if filtered_data is not None:
+
+            # Create a row with three dropdowns and a "Go" button
+            col1, col2, col3, col4 = st.columns([1, 1, 1, 0.5])
+            with col1:
+                selected_year = st.selectbox("Select Year", self.get_unique_values("season"), key="h2h_year_value")
+            with col2:
+                selected_week = st.selectbox(
+                    "Select Week",
+                    self.get_unique_values("week", filters={"season": [selected_year]}),
+                    key="h2h_week_value"
+                ) if selected_year else None
+            with col3:
+                selected_matchup_name = st.selectbox(
+                    "Select Matchup Name",
+                    self.get_unique_values("matchup_name",
+                                           filters={"season": [selected_year], "week": [selected_week]}),
+                    key="h2h_matchup_name_value"
+                ) if selected_year and selected_week else None
+            with col4:
+                go_button = st.button("Go", key="h2h_go_button")
+
+            # Display H2H Viewer only when "Go" is clicked and all filters are selected
+            if go_button and selected_year and selected_week and selected_matchup_name:
+                filtered_data = self.apply_filters({
+                    "season": [selected_year],
+                    "week": [selected_week],
+                    "matchup_name": [selected_matchup_name]
+                })
+
                 viewer = H2HViewer(filtered_data, self.matchup_data)
                 viewer.display(prefix="h2h")
+            elif not go_button:
+                st.write("Please select a year, week, and matchup name, then click 'Go' to view H2H data.")

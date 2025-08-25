@@ -7,6 +7,10 @@ class CombinedMatchupStatsViewer:
         self.matchup_data = matchup_data
 
     def display(self, prefix, show_per_game=False):
+        # Ensure the 'season' column in self.filtered_data and 'year' column in self.matchup_data have the same data type
+        self.filtered_data['season'] = self.filtered_data['season'].astype(int)
+        self.matchup_data['year'] = self.matchup_data['year'].astype(int)
+
         # Merge player data with matchup data
         merged_data = pd.merge(self.filtered_data, self.matchup_data, left_on=['owner', 'week', 'season'], right_on=['Manager', 'week', 'year'], how='inner')
 
