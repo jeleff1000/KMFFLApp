@@ -6,14 +6,17 @@ class SeasonProjectedStatsViewer:
 
     def display(self, prefix=""):
         st.header("Season Projected Stats")
-        required_columns = ['Manager', 'opponent', 'team_points', 'opponent_score', 'team_projected_points',
-                            'opponent_projected_points', 'Expected Odds', 'margin', 'Expected Spread', 'week', 'year',
-                            'Projected Score Error', 'Absolute Value Projected Score Error']
+        required_columns = [
+            'Manager', 'opponent', 'team_points', 'opponent_score', 'team_projected_points',
+            'opponent_projected_points', 'Expected Odds', 'margin', 'Expected Spread', 'week', 'year',
+            'Projected Score Error', 'Absolute Value Projected Score Error'
+        ]
         if all(col in self.df.columns for col in required_columns):
             self.df['win'] = self.df['team_points'] > self.df['opponent_score']
             self.df['loss'] = self.df['team_points'] <= self.df['opponent_score']
             self.df['Projected Wins'] = self.df['team_projected_points'] > self.df['opponent_projected_points']
             self.df['Above Projected Score'] = self.df['team_points'] > self.df['team_projected_points']
+            self.df['Below Projected Score'] = self.df['team_points'] < self.df['team_projected_points']
             self.df['Win Matchup Against the Spread'] = (self.df['team_points'] - self.df['opponent_score']) > self.df['Expected Spread']
 
             aggregation_type = st.toggle("Per Game", value=False, key=f"{prefix}_aggregation_type")
@@ -31,6 +34,7 @@ class SeasonProjectedStatsViewer:
                 'loss': aggregation_func,
                 'Projected Wins': aggregation_func,
                 'Above Projected Score': aggregation_func,
+                'Below Projected Score': aggregation_func,
                 'Win Matchup Against the Spread': aggregation_func,
                 'Projected Score Error': aggregation_func,
                 'Absolute Value Projected Score Error': aggregation_func
@@ -42,7 +46,7 @@ class SeasonProjectedStatsViewer:
                     'Expected Spread', 'Projected Score Error', 'Absolute Value Projected Score Error'
                 ]
                 columns_to_round_3 = [
-                    'Expected Odds', 'Projected Wins', 'Above Projected Score', 'Win Matchup Against the Spread'
+                    'Expected Odds', 'Projected Wins', 'Above Projected Score', 'Below Projected Score', 'Win Matchup Against the Spread'
                 ]
                 aggregated_df[columns_to_round_2] = aggregated_df[columns_to_round_2].round(2)
                 aggregated_df[columns_to_round_3] = aggregated_df[columns_to_round_3].round(3)
@@ -64,11 +68,36 @@ class SeasonProjectedStatsViewer:
                 'Expected Spread': 'Expected Margin',
                 'Projected Wins': 'Projected W',
                 'Above Projected Score': 'Above Projected Score',
+                'Below Projected Score': 'Below Projected Score',
                 'Win Matchup Against the Spread': 'W vs Spread',
                 'Projected Score Error': 'Projected Score Error',
                 'Absolute Value Projected Score Error': 'Absolute Value Proj Error'
             })
 
             st.dataframe(display_df, hide_index=True)
+
+            # --- Aggregated summary table below main viewer ---
+            summary_df = aggregated_df.groupby('year').agg({
+                'team_points': aggregation_func,
+                'team_projected_points': aggregation_func,
+                'Above Projected Score': aggregation_func,
+                'Below Projected Score': aggregation_func,
+                'Projected Score Error': aggregation_func,
+                'Absolute Value Projected Score Error': aggregation_func
+            }).reset_index()
+
+            summary_df['year'] = summary_df['year'].astype(str)
+            summary_df = summary_df.rename(columns={
+                'year': 'Year',
+                'team_points': 'PF',
+                'team_projected_points': 'Projected Points',
+                'Above Projected Score': 'Above Projected Score',
+                'Below Projected Score': 'Below Projected Score',
+                'Projected Score Error': 'Projected Score Error',
+                'Absolute Value Projected Score Error': 'Absolute Value Proj Error'
+            })
+
+            st.markdown("### Aggregated Season Summary (All Managers)")
+            st.dataframe(summary_df, hide_index=True)
         else:
             st.write("The required columns are not available in the data.")

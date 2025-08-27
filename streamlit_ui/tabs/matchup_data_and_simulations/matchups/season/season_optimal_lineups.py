@@ -106,5 +106,26 @@ def display_season_optimal_lineup(player_df, matchup_data):
         'opponent_optimal': 'Opp Optimal'
     })
 
-    # Display the season aggregated DataFrame
+    # Display the main table
+    st.markdown("### Season Optimal Stats (By Manager)")
     st.dataframe(season_aggregated_df, hide_index=True)
+
+    # Aggregate across all managers for each year
+    summary_df = season_aggregated_df.groupby('Year').agg({
+        'PF': 'sum',
+        'Optimal PF': 'sum',
+        'Lost Points': 'sum'
+    }).reset_index()
+
+    # Calculate total number of games per year
+    num_games = aggregated_df.groupby('year').size().reset_index(name='num_games')
+    num_games.rename(columns={'year': 'Year'}, inplace=True)
+
+    # Merge and calculate per game stats
+    summary_df = pd.merge(summary_df, num_games, on='Year')
+    for col in ['PF', 'Optimal PF', 'Lost Points']:
+        summary_df[col] = (summary_df[col] / summary_df['num_games']).round(2)
+    summary_df.drop(columns=['num_games'], inplace=True)
+
+    st.markdown("### Season Optimal Stats (All Managers, Per Game)")
+    st.dataframe(summary_df, hide_index=True)
