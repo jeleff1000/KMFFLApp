@@ -65,7 +65,6 @@ class SeasonMatchupOverviewViewer:
 
             tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats"]
             tabs = st.tabs(tab_names)
-
             for i, tab_name in enumerate(tab_names):
                 with tabs[i]:
                     if tab_name == "Matchup Stats":
@@ -75,16 +74,18 @@ class SeasonMatchupOverviewViewer:
                         viewer = SeasonAdvancedStatsViewer(filtered_df)
                         viewer.display(prefix=f"{prefix}_advanced_stats")
                     elif tab_name == "Projected Stats":
-                        viewer = SeasonProjectedStatsViewer(filtered_df)
+                        viewer = SeasonProjectedStatsViewer(filtered_df, self.df)  # self.df is always unfiltered
                         viewer.display(prefix=f"{prefix}_projected_stats")
                     elif tab_name == "Optimal Stats":
-                        display_season_optimal_lineup(self.player_df, filtered_df)
+                        display_season_optimal_lineup(self.player_df, filtered_df,
+                                                      self.df)  # Pass both filtered and unfiltered
 
             st.subheader("Summary Data")
             total_games = len(filtered_df)
             avg_team_points = filtered_df['team_points'].mean()
             avg_opponent_points = filtered_df['opponent_score'].mean()
 
-            st.write(f"Total Games: {total_games} | Avg Team Points: {avg_team_points:.2f} | Avg Opponent Points: {avg_opponent_points:.2f}")
+            st.write(
+                f"Total Games: {total_games} | Avg Team Points: {avg_team_points:.2f} | Avg Opponent Points: {avg_opponent_points:.2f}")
         else:
             st.write("No data available")
