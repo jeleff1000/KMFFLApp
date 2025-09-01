@@ -80,13 +80,16 @@ def display_draft_optimizer(draft_history, player_data):
     # Filter draft_history to only include rows where Cost is greater than 0
     draft_history_with_cost = draft_history[draft_history['Cost'] > 0]
 
-    # Input fields for number of players for each position
     st.subheader("Optimizer Inputs")
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
-        start_year = st.number_input("Select Start Year", min_value=int(draft_history_with_cost['Year'].min()), max_value=int(draft_history_with_cost['Year'].max()), value=int(draft_history_with_cost['Year'].min()))
+        start_year = st.number_input("Select Start Year", min_value=int(draft_history_with_cost['Year'].min()),
+                                     max_value=int(draft_history_with_cost['Year'].max()),
+                                     value=int(draft_history_with_cost['Year'].min()))
     with col2:
-        end_year = st.number_input("Select End Year", min_value=int(draft_history_with_cost['Year'].min()), max_value=int(draft_history_with_cost['Year'].max()), value=int(draft_history_with_cost['Year'].max()))
+        end_year = st.number_input("Select End Year", min_value=int(draft_history_with_cost['Year'].min()),
+                                   max_value=int(draft_history_with_cost['Year'].max()),
+                                   value=int(draft_history_with_cost['Year'].max()))
     with col3:
         budget = st.number_input("Enter Budget", min_value=0, value=200)
     col4, col5, col6 = st.columns([1, 1, 1])
@@ -103,36 +106,64 @@ def display_draft_optimizer(draft_history, player_data):
         num_wr = st.number_input("Number of WRs", min_value=0, value=3)
     with col9:
         num_te = st.number_input("Number of TEs", min_value=0, value=1)
+    col10, = st.columns([1])
+    with col10:
+        num_flex = st.number_input("Number of FLEX (WR/RB/TE)", min_value=0, value=1)
 
     with st.expander("Set Price Constraints for All Positions"):
-        qb_constraints = [st.slider(f"Max Cost for QB {i+1}", min_value=0, max_value=100, value=100) for i in range(num_qb)]
-        def_constraints = [st.slider(f"Max Cost for DEF {i+1}", min_value=0, max_value=100, value=100) for i in range(num_def)]
-        k_constraints = [st.slider(f"Max Cost for K {i+1}", min_value=0, max_value=100, value=100) for i in range(num_k)]
+        qb_constraints = [
+            st.number_input(f"Max Cost for QB {i + 1}", min_value=0, max_value=100, value=100, key=f"qb_{i + 1}") for i
+            in range(num_qb)]
+        def_constraints = [
+            st.number_input(f"Max Cost for DEF {i + 1}", min_value=0, max_value=100, value=100, key=f"def_{i + 1}") for
+            i in range(num_def)]
+        k_constraints = [
+            st.number_input(f"Max Cost for K {i + 1}", min_value=0, max_value=100, value=100, key=f"k_{i + 1}") for i in
+            range(num_k)]
         rb_constraints = []
         for i in range(num_rb):
             if i == 0:
-                rb_constraints.append(st.slider(f"Max Cost for RB {i+1}", min_value=0, max_value=100, value=100, key=f"rb_{i+1}"))
+                rb_constraints.append(
+                    st.number_input(f"Max Cost for RB {i + 1}", min_value=0, max_value=100, value=100,
+                                    key=f"rb_{i + 1}"))
             else:
-                rb_constraints.append(st.slider(f"Max Cost for RB {i+1}", min_value=0, max_value=rb_constraints[i-1], value=rb_constraints[i-1], key=f"rb_{i+1}"))
+                rb_constraints.append(
+                    st.number_input(f"Max Cost for RB {i + 1}", min_value=0, max_value=rb_constraints[i - 1],
+                                    value=rb_constraints[i - 1], key=f"rb_{i + 1}"))
         wr_constraints = []
         for i in range(num_wr):
             if i == 0:
-                wr_constraints.append(st.slider(f"Max Cost for WR {i+1}", min_value=0, max_value=100, value=100, key=f"wr_{i+1}"))
+                wr_constraints.append(
+                    st.number_input(f"Max Cost for WR {i + 1}", min_value=0, max_value=100, value=100,
+                                    key=f"wr_{i + 1}"))
             else:
-                wr_constraints.append(st.slider(f"Max Cost for WR {i+1}", min_value=0, max_value=wr_constraints[i-1], value=wr_constraints[i-1], key=f"wr_{i+1}"))
+                wr_constraints.append(
+                    st.number_input(f"Max Cost for WR {i + 1}", min_value=0, max_value=wr_constraints[i - 1],
+                                    value=wr_constraints[i - 1], key=f"wr_{i + 1}"))
         te_constraints = []
         for i in range(num_te):
             if i == 0:
-                te_constraints.append(st.slider(f"Max Cost for TE {i+1}", min_value=0, max_value=100, value=100, key=f"te_{i+1}"))
+                te_constraints.append(
+                    st.number_input(f"Max Cost for TE {i + 1}", min_value=0, max_value=100, value=100,
+                                    key=f"te_{i + 1}"))
             else:
-                te_constraints.append(st.slider(f"Max Cost for TE {i+1}", min_value=0, max_value=te_constraints[i-1], value=te_constraints[i-1], key=f"te_{i+1}"))
+                te_constraints.append(
+                    st.number_input(f"Max Cost for TE {i + 1}", min_value=0, max_value=te_constraints[i - 1],
+                                    value=te_constraints[i - 1], key=f"te_{i + 1}"))
+        flex_constraints = []
+        for i in range(num_flex):
+            flex_constraints.append(
+                st.number_input(f"Max Cost for FLEX {i + 1}", min_value=0, max_value=100, value=100,
+                                key=f"flex_{i + 1}"))
+        # Add Max Bid number input
+        max_bid = st.number_input("Max Bid (any player)", min_value=0, max_value=100, value=100, key="max_bid")
 
-    # Add an Optimize button
     if st.button("Optimize"):
-        # Preprocess data
         aggregated_data = preprocess_data(draft_history, player_data, start_year, end_year)
 
-        # Apply price constraints to filter out players above the max cost
+        # Apply Max Bid filter first
+        aggregated_data = aggregated_data[aggregated_data['Cost'] <= max_bid]
+
         aggregated_data = apply_price_constraints(aggregated_data, qb_constraints, 'QB', num_qb)
         aggregated_data = apply_price_constraints(aggregated_data, def_constraints, 'DEF', num_def)
         aggregated_data = apply_price_constraints(aggregated_data, k_constraints, 'K', num_k)
@@ -140,47 +171,36 @@ def display_draft_optimizer(draft_history, player_data):
         aggregated_data = apply_price_constraints(aggregated_data, wr_constraints, 'WR', num_wr)
         aggregated_data = apply_price_constraints(aggregated_data, te_constraints, 'TE', num_te)
 
-        # Assign cost buckets such that each bucket contains 3 players per season
+        # FLEX: filter out WR/RB/TE above FLEX constraints
+        for i, max_cost in enumerate(flex_constraints):
+            aggregated_data = aggregated_data[~(
+                    (aggregated_data['Primary Position'].isin(['WR', 'RB', 'TE'])) &
+                    (aggregated_data['Cost'] > max_cost)
+            )]
+
         aggregated_data = assign_cost_buckets(aggregated_data)
 
-        # Calculate median PPG and average cost for each cost bucket within the date range
         avg_ppg_data = aggregated_data.groupby(['Primary Position', 'Cost Bucket']).agg({
             'PPG': 'median',
             'Cost': 'mean'
         }).reset_index()
         avg_ppg_data.columns = ['Primary Position', 'Cost Bucket', 'Median PPG', 'Average Cost']
-
-        # Round values to two decimal places
         avg_ppg_data = avg_ppg_data.round(2)
-
-        # Add a column for the average number of each position drafted per year
         position_counts = aggregated_data.groupby(['Primary Position', 'Year']).size().reset_index(name='Count')
-        avg_position_counts = position_counts.groupby('Primary Position')['Count'].mean().reset_index(name='Average Count')
+        avg_position_counts = position_counts.groupby('Primary Position')['Count'].mean().reset_index(
+            name='Average Count')
         avg_ppg_data = avg_ppg_data.merge(avg_position_counts, on='Primary Position', how='left')
-
-        # Drop the columns 'Cost Bucket' and 'Average Count'
         avg_ppg_data = avg_ppg_data.drop(columns=['Cost Bucket', 'Average Count'])
-
-        # Reorder columns to have 'Average Cost' before 'Median PPG'
         avg_ppg_data = avg_ppg_data[['Primary Position', 'Average Cost', 'Median PPG']]
 
-        # Prepare data for linear programming
         costs = avg_ppg_data['Average Cost'].values
         ppgs = avg_ppg_data['Median PPG'].values
 
-        # Define the linear programming problem
         prob = LpProblem("Draft_Optimizer", LpMaximize)
-
-        # Define the decision variables
         x = [LpVariable(f"x{i}", cat="Binary") for i in range(len(costs))]
-
-        # Objective function
         prob += lpSum([ppgs[i] * x[i] for i in range(len(ppgs))])
-
-        # Budget constraint
         prob += lpSum([costs[i] * x[i] for i in range(len(costs))]) <= budget
 
-        # Position constraints
         position_constraints = {
             'QB': num_qb,
             'RB': num_rb,
@@ -189,28 +209,27 @@ def display_draft_optimizer(draft_history, player_data):
             'DEF': num_def,
             'K': num_k
         }
-
+        # Enforce min and max for all positions
         for position, num in position_constraints.items():
-            if num > 0:
-                position_mask = avg_ppg_data['Primary Position'].str.startswith(position).astype(int).tolist()
-                prob += lpSum([position_mask[i] * x[i] for i in range(len(position_mask))]) == num
+            position_mask = avg_ppg_data['Primary Position'].str.startswith(position).astype(int).tolist()
+            if position in ['WR', 'RB', 'TE']:
+                prob += lpSum([position_mask[i] * x[i] for i in range(len(position_mask))]) >= num
+                prob += lpSum([position_mask[i] * x[i] for i in range(len(position_mask))]) <= num + num_flex
+            else:
+                prob += lpSum([position_mask[i] * x[i] for i in range(len(position_mask))]) >= num
+                prob += lpSum([position_mask[i] * x[i] for i in range(len(position_mask))]) <= num
 
-        # Solve the problem
+        # FLEX constraint: total WR/RB/TE slots = regular + FLEX
+        total_wr_rb_te = num_wr + num_rb + num_te + num_flex
+        flex_mask = avg_ppg_data['Primary Position'].isin(['WR', 'RB', 'TE']).astype(int).tolist()
+        prob += lpSum([flex_mask[i] * x[i] for i in range(len(flex_mask))]) == total_wr_rb_te
+
         prob.solve()
-
-        # Extract the optimal draft slots
         optimal_slots = [value(x[i]) for i in range(len(x))]
-
-        # Convert optimal_slots to a boolean array
         optimal_slots = [bool(slot) for slot in optimal_slots]
-
-        # Filter the avg_ppg_data to get the optimal draft slots
         optimal_draft = avg_ppg_data[optimal_slots]
-
-        # Round values to two decimal places
         optimal_draft = optimal_draft.round(2)
 
-        # Display the optimizer and summary side by side
         col1, col2 = st.columns([2, 1])
         with col1:
             st.dataframe(optimal_draft, hide_index=True)
@@ -219,12 +238,10 @@ def display_draft_optimizer(draft_history, player_data):
             total_ppg = optimal_draft['Median PPG'].sum().round(2)
             st.markdown("### Summary")
             st.markdown(f"""
-            <div style="border:1px solid #ddd; padding: 10px; border-radius: 5px;">
-                <p><strong>Total Cost:</strong> ${total_cost}</p>
-                <p><strong>Total Points Per Game:</strong> {total_ppg}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Ensure the total cost does not exceed the budget
+               <div style="border:1px solid #ddd; padding: 10px; border-radius: 5px;">
+                   <p><strong>Total Cost:</strong> ${total_cost}</p>
+                   <p><strong>Total Points Per Game:</strong> {total_ppg}</p>
+               </div>
+               """, unsafe_allow_html=True)
             if total_cost > budget:
                 st.error("The total cost exceeds the budget. Please adjust the inputs.")
