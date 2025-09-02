@@ -247,7 +247,7 @@ def display_draft_preferences(draft_data, player_df):
             with draft_col:
                 show_drafted = st.checkbox("Drafted", value=True)
             with keep_col:
-                show_keepers = st.checkbox("Keepers", value=True)  # Default to True
+                show_keepers = st.checkbox("Keepers", value=True)
 
             if selected_position_graph == 'All':
                 cols = st.columns(len(positions_in_data))
@@ -259,8 +259,8 @@ def display_draft_preferences(draft_data, player_df):
             else:
                 include_positions = None
 
-            # Always show dashed line checkboxes for all managers
-            default_dash = True
+            # Set dashed line defaults based on manager
+            default_dash = selected_manager_graph == "League Average"
             show_drafted_dash = st.checkbox("Show Total Drafted Line", value=default_dash)
             show_keepers_dash = st.checkbox("Show Total Keepers Line", value=default_dash)
             show_unused_dash = st.checkbox("Show Total Unused Dollars Line", value=default_dash)
@@ -395,8 +395,8 @@ def display_draft_preferences(draft_data, player_df):
                         player_row = filtered_graph[
                             (filtered_graph['Year'] == year) & (filtered_graph['RankNum'] == col)
                             ]
-                        if not player_row.empty and 'Name Full' in player_row.columns:
-                            hover_texts.append(player_row.iloc[0]['Name Full'])
+                        if not player_row.empty and 'Name Full' in player_row.columns and 'Cost' in player_row.columns:
+                            hover_texts.append(f"{player_row.iloc[0]['Name Full']}, ${player_row.iloc[0]['Cost']}")
                         else:
                             hover_texts.append('')
                     else:
