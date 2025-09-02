@@ -2,3 +2,4 @@ pulp
 matplotlib
 openpyxl
 joblib
+plotly
