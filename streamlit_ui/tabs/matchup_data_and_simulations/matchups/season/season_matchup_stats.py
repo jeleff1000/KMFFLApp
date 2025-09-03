@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 class SeasonMatchupStatsViewer:
     def __init__(self, df):
@@ -12,6 +13,17 @@ class SeasonMatchupStatsViewer:
 
             aggregation_type = st.toggle("Per Game", value=False, key=f"{prefix}_aggregation_type")
             aggregation_func = 'mean' if aggregation_type else 'sum'
+
+            # Compute Sacko flag before aggregation
+            sacko_flags = []
+            if 'Sacko' in self.df.columns:
+                for (manager, year), group in self.df.groupby(['Manager', 'year']):
+                    sacko_flag = group['Sacko'].eq(1).any()
+                    sacko_flags.append({'Manager': manager, 'year': year, 'Sacko': sacko_flag})
+            else:
+                for (manager, year), group in self.df.groupby(['Manager', 'year']):
+                    sacko_flags.append({'Manager': manager, 'year': year, 'Sacko': False})
+            sacko_df = pd.DataFrame(sacko_flags)
 
             aggregated_df = self.df.groupby(['Manager', 'year']).agg({
                 'team_points': aggregation_func,
@@ -39,6 +51,9 @@ class SeasonMatchupStatsViewer:
                 'Real Total Matchup Score': aggregation_func
             }).reset_index()
 
+            # Merge Sacko column
+            aggregated_df = pd.merge(aggregated_df, sacko_df, on=['Manager', 'year'], how='left')
+
             if aggregation_type:
                 columns_to_round_2 = [
                     'team_points', 'opponent_score', 'margin', 'total_matchup_score', 'teams_beat_this_week',
@@ -62,7 +77,7 @@ class SeasonMatchupStatsViewer:
             aggregated_df['Champion_check'] = aggregated_df['Champion'] > 0
             aggregated_df['Team_Made_Playoffs'] = aggregated_df['is_playoffs'] > 0
 
-            display_df = aggregated_df[['Manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check']]
+            display_df = aggregated_df[['Manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check', 'Sacko']]
             display_df = display_df.rename(columns={
                 'year': 'Year',
                 'win': 'W',
