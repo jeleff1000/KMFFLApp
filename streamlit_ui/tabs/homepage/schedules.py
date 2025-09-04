@@ -6,7 +6,7 @@ class SeasonStandingsViewer:
         self.df = df
 
     def display(self, prefix=""):
-        st.header("Season Standings")
+        st.header("Schedules")
         df = self.df
 
         if 'win' in df.columns:
