@@ -20,11 +20,11 @@ class HallOfFameViewer:
                 champions_df['Projected Score'] = champions_df['team_projected_points'].astype(str) + ' - ' + \
                                                   champions_df['opponent_projected_points'].astype(str)
                 champions_df.rename(
-                    columns={'Manager': 'Winner', 'opponent': 'Runner-Up', 'Personal Season Mean': 'PPG'}, inplace=True)
+                    columns={'Manager': 'Winner', 'opponent': 'Runner-Up', 'Personal Season Mean': 'Season-Long PPG'}, inplace=True)
                 champions_df['year'] = champions_df['year'].astype(str)
-                champions_df['PPG'] = champions_df['PPG'].round(2)
+                champions_df['Season-Long PPG'] = champions_df['Season-Long PPG'].round(2)
                 champions_df = champions_df[
-                    ['year', 'Winner', 'Runner-Up', 'Record', 'Score', 'Projected Score', 'PPG']].drop_duplicates(
+                    ['year', 'Winner', 'Runner-Up', 'Record', 'Score', 'Projected Score', 'Season-Long PPG']].drop_duplicates(
                     subset=['year', 'Winner', 'Runner-Up'])
                 champions_df = champions_df.sort_values(by='year', ascending=True)
                 champions_df = champions_df.set_index('year')
