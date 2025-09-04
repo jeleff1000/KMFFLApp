@@ -31,16 +31,16 @@ def main():
     df_dict = load_pickle_file(file_path)
 
     if df_dict:
-        tab_names = ["Homepage", "Matchups", "Player Data", "Draft History", "Transactions", "Injuries", "Simulations", "Team Names", "Keeper", "Downloads"]
+        tab_names = ["Homepage", "Manager Stats", "Player Stats", "Draft History", "Transactions", "Injuries", "Simulations", "Team Names", "Keeper", "Downloads"]
         tabs = st.tabs(tab_names)
 
         for i, tab_name in enumerate(tab_names):
             with tabs[i]:
                 if tab_name == "Homepage":
                     display_homepage_overview(df_dict)
-                elif tab_name == "Matchups":
+                elif tab_name == "Manager Stats":
                     display_matchup_overview(df_dict)
-                elif tab_name == "Player Data":
+                elif tab_name == "Player Stats":
                     sub_tab_names = ["Weekly", "Season", "Career"]
                     sub_tabs = st.tabs(sub_tab_names)
                     for j, sub_tab_name in enumerate(sub_tab_names):

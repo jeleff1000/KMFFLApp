@@ -4,6 +4,7 @@ from .weekly_advanced_stats import WeeklyAdvancedStatsViewer
 from .weekly_matchup_stats import WeeklyMatchupStatsViewer
 from .weekly_projected_stats import WeeklyProjectedStatsViewer
 from .weekly_optimal_lineups import display_weekly_optimal_lineup
+from .weekly_matchup_graphs import display_weekly_graphs  # Adjust import as needed
 
 class WeeklyMatchupDataViewer:
     def __init__(self, matchup_df, player_df):
@@ -30,39 +31,54 @@ class WeeklyMatchupDataViewer:
 
     def display(self, prefix=""):
         if self.matchup_df is not None:
-            # Dropdown filters for Manager, opponent, and year
-            col1, col2, col3 = st.columns([1, 1, 1])
+            # Dropdown filters for Manager, opponent, year, and Final Playoff Seed
+            col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
             with col1:
                 managers = sorted(self.matchup_df['Manager'].unique().tolist())
                 selected_managers = st.multiselect("Select Manager(s)", managers, default=[], key=f"{prefix}_managers")
                 if not selected_managers:
-                    selected_managers = managers  # Select all managers if empty
+                    selected_managers = managers
 
             with col2:
                 opponents = sorted(self.matchup_df['opponent'].unique().tolist())
-                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=[], key=f"{prefix}_opponents")
+                selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=[],
+                                                    key=f"{prefix}_opponents")
                 if not selected_opponents:
-                    selected_opponents = opponents  # Select all opponents if empty
+                    selected_opponents = opponents
 
             with col3:
                 years = sorted(self.matchup_df['year'].astype(int).unique().tolist())
                 selected_years = st.multiselect("Select Year(s)", years, default=[], key=f"{prefix}_years")
                 if not selected_years:
-                    selected_years = years  # Select all years if empty
+                    selected_years = years
+
+            with col4:
+                seeds = sorted(self.matchup_df['Final Playoff Seed'].dropna().unique().tolist())
+                selected_seeds = st.multiselect("Select Final Playoff Seed(s)", seeds, default=[],
+                                                key=f"{prefix}_seeds")
+                if not selected_seeds:
+                    selected_seeds = seeds
 
             # Checkboxes for game types
-            col4, col5, col6 = st.columns([1, 1, 1])
-            with col4:
-                regular_season = st.checkbox("Regular Season", value=True, key=f"{prefix}_regular_season_checkbox")
+            col5, col6, col7 = st.columns([1, 1, 1])
             with col5:
-                playoffs = st.checkbox("Playoffs", value=True, key=f"{prefix}_playoffs_checkbox")
+                regular_season = st.checkbox("Regular Season", value=True, key=f"{prefix}_regular_season_checkbox")
             with col6:
+                playoffs = st.checkbox("Playoffs", value=True, key=f"{prefix}_playoffs_checkbox")
+            with col7:
                 consolation = st.checkbox("Consolation", key=f"{prefix}_consolation_checkbox")
 
-            # Filter the DataFrame based on selected managers, opponents, years, and game types
-            filtered_df = self.filter_data(self.matchup_df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
+            # Filter the DataFrame based on selected filters
+            filtered_df = self.matchup_df[
+                self.matchup_df['Manager'].isin(selected_managers) &
+                self.matchup_df['opponent'].isin(selected_opponents) &
+                self.matchup_df['year'].isin(selected_years) &
+                self.matchup_df['Final Playoff Seed'].isin(selected_seeds)
+                ]
+            filtered_df = self.filter_data(filtered_df, regular_season, playoffs, consolation, selected_managers,
+                                           selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats"]
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats", "Graphs"]
             tabs = st.tabs(tab_names)
 
             for i, tab_name in enumerate(tab_names):
@@ -78,6 +94,8 @@ class WeeklyMatchupDataViewer:
                         viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Optimal Stats":
                         display_weekly_optimal_lineup(filtered_df, self.player_df)
+                    elif tab_name == "Graphs":
+                        display_weekly_graphs(filtered_df)
 
             st.subheader("Summary Data")
             total_games = len(filtered_df)
