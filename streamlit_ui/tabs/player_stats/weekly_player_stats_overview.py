@@ -127,7 +127,7 @@ class StreamlitWeeklyPlayerDataViewer:
         with tabs[1]:
             st.header("Advanced Stats")
             filters, filtered_data = display_filters(tab_index=1)
-            advanced_stats_df = get_advanced_stats(filtered_data, "All")
+            advanced_stats_df = get_advanced_stats(filtered_data)
             st.dataframe(advanced_stats_df, hide_index=True)
 
         with tabs[2]:

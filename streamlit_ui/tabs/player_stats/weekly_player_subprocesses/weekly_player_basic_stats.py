@@ -14,5 +14,9 @@ def get_basic_stats(player_data, position):
     else:
         columns = ['player', 'team', 'week', 'season', 'owner', 'points', 'position']
 
-    player_data['season'] = player_data['season'].astype(str).str.replace(',', '')
-    return player_data[columns]
+    player_data['season'] = player_data['season'].astype(str)
+    player_data['week'] = player_data['week'].astype(int)
+    player_data['points'] = player_data['points'].astype(float)
+
+    sorted_data = player_data.sort_values(['season', 'week', 'points'], ascending=[True, True, False])
+    return sorted_data[columns]
