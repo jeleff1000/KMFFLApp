@@ -51,6 +51,10 @@ def get_advanced_stats(player_data):
     player_data['week'] = player_data['week'].astype(int)
     player_data['points'] = player_data['points'].astype(float)
 
-    sorted_data = player_data.sort_values(['position', 'season', 'week', 'points'], ascending=[True, True, True, False])
+    # Initial sort (no position)
+    sorted_data = player_data.sort_values(['season', 'week', 'points'], ascending=[True, True, False])
     result = sorted_data.groupby('fantasy position', group_keys=False).apply(select_columns)
+
+    # Final table sort (no position)
+    result = result.sort_values(['season', 'week', 'points'], ascending=[True, True, False]).reset_index(drop=True)
     return result
