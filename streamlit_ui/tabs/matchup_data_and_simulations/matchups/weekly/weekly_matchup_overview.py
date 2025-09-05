@@ -4,7 +4,6 @@ from .weekly_advanced_stats import WeeklyAdvancedStatsViewer
 from .weekly_matchup_stats import WeeklyMatchupStatsViewer
 from .weekly_projected_stats import WeeklyProjectedStatsViewer
 from .weekly_optimal_lineups import display_weekly_optimal_lineup
-from .weekly_matchup_graphs import display_weekly_graphs  # Adjust import as needed
 
 class WeeklyMatchupDataViewer:
     def __init__(self, matchup_df, player_df):
@@ -78,7 +77,7 @@ class WeeklyMatchupDataViewer:
             filtered_df = self.filter_data(filtered_df, regular_season, playoffs, consolation, selected_managers,
                                            selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats", "Graphs"]
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats"]
             tabs = st.tabs(tab_names)
 
             for i, tab_name in enumerate(tab_names):
@@ -94,8 +93,6 @@ class WeeklyMatchupDataViewer:
                         viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Optimal Stats":
                         display_weekly_optimal_lineup(filtered_df, self.player_df)
-                    elif tab_name == "Graphs":
-                        display_weekly_graphs(filtered_df)
 
             st.subheader("Summary Data")
             total_games = len(filtered_df)

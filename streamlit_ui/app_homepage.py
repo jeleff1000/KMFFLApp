@@ -1,4 +1,3 @@
-# python
 import os
 import streamlit as st
 import pandas as pd
@@ -13,7 +12,8 @@ from tabs.draft_data.draft_data_overview import display_draft_data_overview
 from tabs.injury_data.injury_overview import display_injury_overview
 from tabs.transactions.transactions_adds_drops_trades_overview import AllTransactionsViewer
 from tabs.team_names.team_names import display_team_names
-from tabs.homepage.homepage_overview import display_homepage_overview  # Import homepage overview
+from tabs.homepage.homepage_overview import display_homepage_overview
+from tabs.graphs.graphs_overview import display_graphs_overview  # <-- Add this import
 
 @st.cache_data
 def load_pickle_file(file_path):
@@ -31,7 +31,10 @@ def main():
     df_dict = load_pickle_file(file_path)
 
     if df_dict:
-        tab_names = ["Homepage", "Manager Stats", "Player Stats", "Draft History", "Transactions", "Injuries", "Simulations", "Team Names", "Keeper", "Downloads"]
+        tab_names = [
+            "Homepage", "Manager Stats", "Player Stats", "Draft History", "Transactions",
+            "Injuries", "Simulations", "Team Names", "Keeper", "Graphs", "Downloads"  # <-- Add "Graphs"
+        ]
         tabs = st.tabs(tab_names)
 
         for i, tab_name in enumerate(tab_names):
@@ -94,6 +97,8 @@ def main():
                 elif tab_name == "Team Names":
                     matchup_data = df_dict.get("Matchup Data")
                     display_team_names(matchup_data)
+                elif tab_name == "Graphs":
+                    display_graphs_overview(df_dict)
                 elif tab_name == "Downloads":
                     st.header("Download Data as Excel")
                     if st.button("Download"):
