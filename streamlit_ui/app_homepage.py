@@ -13,7 +13,7 @@ from tabs.injury_data.injury_overview import display_injury_overview
 from tabs.transactions.transactions_adds_drops_trades_overview import AllTransactionsViewer
 from tabs.team_names.team_names import display_team_names
 from tabs.homepage.homepage_overview import display_homepage_overview
-from tabs.graphs.graphs_overview import display_graphs_overview  # <-- Add this import
+from tabs.graphs.graphs_overview import display_graphs_overview
 
 @st.cache_data
 def load_pickle_file(file_path):
@@ -33,7 +33,7 @@ def main():
     if df_dict:
         tab_names = [
             "Homepage", "Manager Stats", "Player Stats", "Draft History", "Transactions",
-            "Injuries", "Simulations", "Team Names", "Keeper", "Graphs", "Downloads"  # <-- Add "Graphs"
+            "Injuries", "Simulations", "Team Names", "Keeper", "Graphs"
         ]
         tabs = st.tabs(tab_names)
 
@@ -99,14 +99,6 @@ def main():
                     display_team_names(matchup_data)
                 elif tab_name == "Graphs":
                     display_graphs_overview(df_dict)
-                elif tab_name == "Downloads":
-                    st.header("Download Data as Excel")
-                    if st.button("Download"):
-                        output_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.xlsx')
-                        with pd.ExcelWriter(output_path) as writer:
-                            for key, df in df_dict.items():
-                                df.to_excel(writer, sheet_name=key, index=False)
-                        st.success(f"Data has been downloaded to {output_path}")
 
 if __name__ == "__main__":
     main()
