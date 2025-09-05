@@ -54,17 +54,14 @@ class CombinedMatchupStatsViewer:
                  'opponent_score', 'win', 'is_playoffs_check', 'started', 'optimal_player']
             ]
             display_df['year'] = display_df['year'].astype(str)
-            display_df = display_df.sort_values(by=['year', 'week', 'fantasy position']).reset_index(drop=True)
+            display_df['week'] = display_df['week'].astype(int)
+            display_df['points'] = display_df['points'].astype(float)
+
+            # Sort by year, week, and points (descending)
+            display_df = display_df.sort_values(
+                by=['year', 'week', 'points'],
+                ascending=[True, True, False]
+            ).reset_index(drop=True)
 
             # Display the DataFrame in Streamlit
             st.dataframe(display_df, hide_index=True)
-        else:
-            st.write("The required column 'win' is not available in the data.")
-
-        # Display the entire unfiltered filtered_data DataFrame
-        st.subheader("Full Filtered Data")
-        st.dataframe(self.filtered_data, hide_index=True)
-
-        # Display the entire unfiltered matchup_data DataFrame
-        st.subheader("Full Matchup Data")
-        st.dataframe(self.matchup_data, hide_index=True)
