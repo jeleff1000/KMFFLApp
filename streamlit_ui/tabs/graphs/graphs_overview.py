@@ -2,6 +2,7 @@ import streamlit as st
 from .weekly_scoring_graphs import display_weekly_scoring_graphs
 from .draft_preferences_graph import display_cost_over_time_graph
 from .position_group_scoring import display_position_group_scoring_graphs
+from .player_scoring_graph import display_player_scoring_graphs  # <-- Import the new function
 
 def display_graphs_overview(df_dict):
     st.title("Graphs Overview")
@@ -11,7 +12,7 @@ def display_graphs_overview(df_dict):
         "Weekly Scoring",
         "Draft Preferences",
         "Position Group Scoring",
-        # Add more tab names here
+        "Player Scoring",  # <-- Add the new tab
     ]
     tabs = st.tabs(tab_names)
 
@@ -28,5 +29,7 @@ def display_graphs_overview(df_dict):
                     st.error("Draft data not found.")
             elif tab_name == "Position Group Scoring":
                 display_position_group_scoring_graphs(df_dict, prefix=unique_prefix)
+            elif tab_name == "Player Scoring":  # <-- Add this block
+                display_player_scoring_graphs(df_dict, prefix=unique_prefix)
             else:
                 st.info("No content for this tab yet.")
