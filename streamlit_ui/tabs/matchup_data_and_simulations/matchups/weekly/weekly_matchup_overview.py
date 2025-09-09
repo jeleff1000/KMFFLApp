@@ -30,8 +30,8 @@ class WeeklyMatchupDataViewer:
 
     def display(self, prefix=""):
         if self.matchup_df is not None:
-            # Dropdown filters for Manager, opponent, year, and Final Playoff Seed
-            col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+            # Dropdown filters for Manager, opponent, year
+            col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 managers = sorted(self.matchup_df['Manager'].unique().tolist())
                 selected_managers = st.multiselect("Select Manager(s)", managers, default=[], key=f"{prefix}_managers")
@@ -51,28 +51,20 @@ class WeeklyMatchupDataViewer:
                 if not selected_years:
                     selected_years = years
 
-            with col4:
-                seeds = sorted(self.matchup_df['Final Playoff Seed'].dropna().unique().tolist())
-                selected_seeds = st.multiselect("Select Final Playoff Seed(s)", seeds, default=[],
-                                                key=f"{prefix}_seeds")
-                if not selected_seeds:
-                    selected_seeds = seeds
-
             # Checkboxes for game types
-            col5, col6, col7 = st.columns([1, 1, 1])
-            with col5:
+            col4, col5, col6 = st.columns([1, 1, 1])
+            with col4:
                 regular_season = st.checkbox("Regular Season", value=True, key=f"{prefix}_regular_season_checkbox")
-            with col6:
+            with col5:
                 playoffs = st.checkbox("Playoffs", value=True, key=f"{prefix}_playoffs_checkbox")
-            with col7:
+            with col6:
                 consolation = st.checkbox("Consolation", key=f"{prefix}_consolation_checkbox")
 
             # Filter the DataFrame based on selected filters
             filtered_df = self.matchup_df[
                 self.matchup_df['Manager'].isin(selected_managers) &
                 self.matchup_df['opponent'].isin(selected_opponents) &
-                self.matchup_df['year'].isin(selected_years) &
-                self.matchup_df['Final Playoff Seed'].isin(selected_seeds)
+                self.matchup_df['year'].isin(selected_years)
                 ]
             filtered_df = self.filter_data(filtered_df, regular_season, playoffs, consolation, selected_managers,
                                            selected_opponents, selected_years)
