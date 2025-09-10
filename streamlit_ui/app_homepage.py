@@ -87,10 +87,8 @@ def main():
                 elif tab_name == "Keeper":
                     st.header("Keeper")
                     keeper_data = df_dict.get("Player Data")
-                    draft_history = df_dict.get("Draft History")
-                    adds_data = df_dict.get("All Transactions")
-                    if keeper_data is not None and draft_history is not None and adds_data is not None:
-                        keeper_data_viewer = KeeperDataViewer(keeper_data, draft_history, adds_data)
+                    if keeper_data is not None:
+                        keeper_data_viewer = KeeperDataViewer(keeper_data)
                         keeper_data_viewer.display()
                     else:
                         st.error("Keeper data not found.")

@@ -38,23 +38,21 @@ def get_advanced_stats(player_data):
                 'Pts Allow 1-6', 'Pts Allow 14-20', 'Pts Allow 21-27', 'Pts Allow 28-34',
                 'Pts Allow 35+', 'Pts Allow 7-13', 'Yds Allow 0-99', 'Yds Allow 100-199',
                 'Yds Allow 200-299', 'Yds Allow 300-399', 'Yds Allow 400-499', 'Yds Allow 500+',
-                'defensive_td', 'Safe', 'Defensive Interceptions', 'Eligible_Defensive_Points_Allowed',
-                'Extra Point Return TD', '3 and Outs', '4 Dwn Stops', 'blocked_kick',
-                'Muffed Punt Recoveries', 'qb_hit', 'Sack', 'combined tfl and sacks',
-                'defensive_extra_point_conv', 'Total Points Allowed', 'Muffed Punts'
+                'defensive_td', 'Safe', 'blocked_kick', 'Muffed Punt Recoveries', 'qb_hit',
+                'Sack', 'combined tfl and sacks', 'defensive_extra_point_conv',
+                'Total Points Allowed', 'Muffed Punts'
             ]
         else:
             columns = ['player', 'team', 'week', 'season', 'owner', 'points', 'position']
+        # Only select columns that exist in the group
+        columns = [col for col in columns if col in group.columns]
         return group[columns]
 
     player_data['season'] = player_data['season'].astype(str)
     player_data['week'] = player_data['week'].astype(int)
     player_data['points'] = player_data['points'].astype(float)
 
-    # Initial sort (no position)
     sorted_data = player_data.sort_values(['season', 'week', 'points'], ascending=[True, True, False])
     result = sorted_data.groupby('fantasy position', group_keys=False).apply(select_columns)
-
-    # Final table sort (no position)
     result = result.sort_values(['season', 'week', 'points'], ascending=[True, True, False]).reset_index(drop=True)
     return result
