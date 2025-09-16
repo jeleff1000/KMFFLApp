@@ -2,6 +2,7 @@ import os
 import streamlit as st
 import pandas as pd
 import pickle
+import gzip
 from tabs.matchup_data_and_simulations.matchups.matchup_overview import display_matchup_overview
 from tabs.keepers.keepers_home import KeeperDataViewer
 from tabs.matchup_data_and_simulations.simulation_home import display_simulations_viewer
@@ -18,7 +19,7 @@ from tabs.graphs.graphs_overview import display_graphs_overview
 @st.cache_data
 def load_pickle_file(file_path):
     try:
-        with open(file_path, 'rb') as f:
+        with gzip.open(file_path, 'rb') as f:
             df_dict = pickle.load(f)
         return df_dict
     except Exception as e:
@@ -27,7 +28,7 @@ def load_pickle_file(file_path):
 
 def main():
     st.title("KMFFL App")
-    file_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.pkl')
+    file_path = os.path.join(os.path.dirname(__file__), 'Sheet 2.0.pkl.gz')
     df_dict = load_pickle_file(file_path)
 
     if df_dict:
