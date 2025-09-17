@@ -36,10 +36,15 @@ class PlayoffOddsViewer:
 
         n_teams = reg_season_raw["Manager"].nunique()
         seed_cols = [f"x{i}_seed" for i in range(1, n_teams + 1)]
-        seed_dist = odds[["Manager"] + seed_cols].reset_index(drop=True)
+        # Set Manager as index, sort, and set index name
+        seed_dist = odds[["Manager"] + seed_cols].set_index("Manager").sort_index()
+        seed_dist.index.name = None  # Remove the index label
 
         if go_clicked:
             st.subheader("Simulation Odds")
             st.dataframe(odds_table, hide_index=True)
             st.subheader("Seed Distribution")
-            st.dataframe(seed_dist, hide_index=True)
+            styled = seed_dist.style.background_gradient(
+                subset=seed_cols, cmap="RdYlGn"
+            ).format("{:.2f}", subset=seed_cols)
+            st.markdown(styled.to_html(escape=False, index=True), unsafe_allow_html=True)
