@@ -6,7 +6,7 @@ class SeasonStandingsViewer:
         self.df = df
 
     def display(self, prefix=""):
-        st.header("Season Standings")
+        st.header("Season Standidngs")
         df = self.df
         if 'is_consolation' in df.columns:
             df = df[df['is_consolation'] != 1].copy()
