@@ -56,7 +56,7 @@ def _render_expected_record(base_df, year, week):
     styled = (df.style
               .background_gradient(cmap='RdYlGn', axis=1)
               .format(precision=2, na_rep=""))
-    st.subheader("Expected Record (Raw Shuffle Data)")
+    st.subheader("Expected Record")
     st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>", unsafe_allow_html=True)
     st.dataframe(styled, use_container_width=True)
 
@@ -110,7 +110,7 @@ def _render_expected_seed(base_df, year, week):
     styled = (df.style
               .background_gradient(cmap='RdYlGn', subset=iteration_cols, axis=0)
               .format(fmt))
-    st.subheader("Expected Seed (Raw Shuffle Seed Data)")
+    st.subheader("Expected Seed")
     st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>", unsafe_allow_html=True)
     st.dataframe(styled, use_container_width=True)
 
