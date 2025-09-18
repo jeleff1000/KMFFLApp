@@ -1,62 +1,121 @@
+# expected_record_viewer.py
 import streamlit as st
 import pandas as pd
-import numpy as np
-from concurrent.futures import ProcessPoolExecutor
-from .shuffle_scores_and_schedules.shuffle_schedule import shuffle_schedule
+from .matchups.weekly.weekly_matchup_overview import WeeklyMatchupDataViewer
 
-@st.cache_data
-def calculate_records(df, num_weeks):
-    agg_df = df.groupby('Manager').agg({'Sim_Wins': 'sum'}).rename(columns={'Sim_Wins': 'Total_Wins'})
-    agg_df['Sim_Record'] = agg_df['Total_Wins'].apply(lambda x: f"{int(x)}-{num_weeks-int(x)}")
-    df = df.merge(agg_df[['Sim_Record']], left_on='Manager', right_index=True, how='left')
-    return df
 
-def perform_shuffle_and_record(filtered_df, num_weeks):
-    shuffled_df = shuffle_schedule(filtered_df.copy())
-    shuffled_df = calculate_records(shuffled_df, num_weeks)
-    return shuffled_df
+def _select_week(base_df):
+    mode = st.radio("Selection Mode", ["Today's Date", "Specific Week"], horizontal=True, key="exp_mode")
+    if mode == "Today's Date":
+        year = int(base_df['year'].max())
+        week = int(base_df[base_df['year'] == year]['week'].max())
+        st.caption(f"Auto-selected Year {year}, Week {week}")
+    else:
+        years = sorted(base_df['year'].astype(int).unique())
+        c_week, c_year = st.columns(2)
+        year_choice = c_year.selectbox("Year", ["Select Year"] + [str(y) for y in years], key="exp_year")
+        if year_choice == "Select Year":
+            return None, None
+        year = int(year_choice)
+        weeks = sorted(base_df[base_df['year'] == year]['week'].astype(int).unique())
+        week_choice = c_week.selectbox("Week", ["Select Week"] + [str(w) for w in weeks], key="exp_week")
+        if week_choice == "Select Week":
+            return None, None
+        week = int(week_choice)
+    return year, week
 
-class ExpectedRecordViewer:
-    def __init__(self, matchup_data_df, player_data_df):
-        self.df = matchup_data_df
 
-    def display(self):
-        st.subheader("Expected Record Simulation")
-        if self.df is not None:
-            years = ["Select Year"] + sorted(self.df['year'].unique().tolist())
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                selected_year = st.selectbox("Select Year", years)
-            if selected_year != "Select Year":
-                filtered_df = self.df[(self.df['year'] == selected_year) &
-                                      (self.df['is_playoffs'] == 0) &
-                                      (self.df['is_consolation'] == 0)]
-                num_weeks = filtered_df['week'].max()
-                record_counts = {manager: {f"{wins}-{num_weeks-wins}": 0 for wins in range(num_weeks + 1)}
-                                 for manager in filtered_df['Manager'].unique()}
-                with ProcessPoolExecutor() as executor:
-                    futures = [executor.submit(perform_shuffle_and_record, filtered_df, num_weeks) for _ in range(105)]
-                    for future in futures:
-                        shuffled_df = future.result()
-                        for manager in shuffled_df['Manager'].unique():
-                            sim_record = shuffled_df[shuffled_df['Manager'] == manager]['Sim_Record'].values[0]
-                            record_counts[manager][sim_record] += 1
-                record_percentages = {manager: {record: float(count) / 105 * 100
-                                                for record, count in records.items()}
-                                      for manager, records in record_counts.items()}
-                results_df = pd.DataFrame(record_percentages).fillna(0).T
-                results_df = results_df[sorted(results_df.columns, key=lambda x: int(x.split('-')[0]), reverse=True)]
-                styled_results_df = results_df.style.background_gradient(cmap='RdYlGn', axis=1)
-                styled_results_df = styled_results_df.format("{:.2f}%")
-                st.markdown(
-                    """
-                    <style>
-                    .dataframe tbody tr td {
-                        font-size: 8px;
-                    }
-                    </style>
-                    """, unsafe_allow_html=True
-                )
-                st.dataframe(styled_results_df)
-        else:
-            st.write("No data available")
+def _render_expected_record(base_df, year, week):
+    week_slice = base_df[(base_df['year'] == year) & (base_df['week'] == week)]
+    if week_slice.empty:
+        st.info("No rows for selected year/week.")
+        return
+    shuffle_cols = [
+        c for c in week_slice.columns
+        if c.startswith("shuffle_") and c.endswith("_win") and int(c.split('_')[1]) <= week
+    ]
+    if not shuffle_cols:
+        st.info("No shuffle win cols.")
+        return
+    shuffle_cols = sorted(shuffle_cols, key=lambda x: int(x.split('_')[1]))
+    needed = ['Manager', 'Wins to Date', 'Losses to Date'] + shuffle_cols
+    needed = [c for c in needed if c in week_slice.columns]
+    df = (week_slice[needed]
+          .drop_duplicates(subset=['Manager'])
+          .set_index('Manager')
+          .sort_index())
+    rename_map = {c: f"{int(c.split('_')[1])}-{week - int(c.split('_')[1])}" for c in shuffle_cols}
+    df = df.rename(columns=rename_map)
+    if {'Wins to Date', 'Losses to Date'}.issubset(df.columns):
+        df['Actual Record'] = df['Wins to Date'].astype(int).astype(str) + '-' + df['Losses to Date'].astype(int).astype(str)
+        df = df.drop(columns=['Wins to Date', 'Losses to Date'])
+    ordered = sorted([c for c in df.columns if c != 'Actual Record'],
+                     key=lambda c: int(c.split('-')[0]) if '-' in c else 0)
+    if 'Actual Record' in df.columns:
+        ordered.append('Actual Record')
+    df = df[ordered]
+    styled = (df.style
+              .background_gradient(cmap='RdYlGn', axis=1)
+              .format(precision=2, na_rep=""))
+    st.subheader("Expected Record (Raw Shuffle Data)")
+    st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>", unsafe_allow_html=True)
+    st.dataframe(styled, use_container_width=True)
+
+
+def _render_expected_seed(base_df, year, week):
+    week_df = base_df[(base_df['year'] == year) & (base_df['week'] == week)]
+    if week_df.empty:
+        st.info("No rows for selected year/week.")
+        return
+    seed_cols = [c for c in week_df.columns if c.startswith("shuffle_") and c.endswith("_seed")]
+    if not seed_cols:
+        st.info("No shuffle seed cols.")
+        return
+    seed_cols = sorted(seed_cols, key=lambda c: int(c.split('_')[1]))
+    cols = ['Manager'] + seed_cols
+    cols = [c for c in cols if c in week_df.columns]
+    df = (week_df[cols]
+          .drop_duplicates(subset=['Manager'])
+          .set_index('Manager')
+          .sort_index())
+    df[seed_cols] = df[seed_cols].apply(pd.to_numeric, errors='coerce')
+    bye_source = [c for c in seed_cols if int(c.split('_')[1]) in (1, 2)]
+    playoff_source = [c for c in seed_cols if int(c.split('_')[1]) <= 6]
+    df['Bye%'] = df[bye_source].sum(axis=1).round(2) if bye_source else 0.0
+    df['Playoff%'] = df[playoff_source].sum(axis=1).round(2) if playoff_source else 0.0
+    rename_map = {c: str(int(c.split('_')[1])) for c in seed_cols}
+    df = df.rename(columns=rename_map)
+    iteration_cols = sorted([c for c in df.columns if c.isdigit()], key=lambda x: int(x))
+    ordered = iteration_cols + ['Bye%', 'Playoff%']
+    df = df[ordered]
+    df[df.select_dtypes(include='number').columns] = df.select_dtypes(include='number').round(2)
+    fmt = {c: '{:.2f}%' for c in ordered}
+    styled = (df.style
+              .background_gradient(cmap='RdYlGn', subset=iteration_cols, axis=0)
+              .format(fmt))
+    st.subheader("Expected Seed (Raw Shuffle Seed Data)")
+    st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>", unsafe_allow_html=True)
+    st.dataframe(styled, use_container_width=True)
+
+
+def display_expected_record_and_seed(matchup_data_df: pd.DataFrame, player_data_df: pd.DataFrame):
+    if matchup_data_df is None or matchup_data_df.empty:
+        st.write("No data available")
+        return
+    base_df = matchup_data_df[
+        (matchup_data_df['is_playoffs'] == 0) &
+        (matchup_data_df['is_consolation'] == 0)
+    ].copy()
+    if base_df.empty:
+        st.write("No regular season data available")
+        return
+    base_df['year'] = base_df['year'].astype(int)
+    base_df['week'] = base_df['week'].astype(int)
+
+    year, week = _select_week(base_df)
+    if year is None or week is None:
+        return
+
+    _render_expected_record(base_df, year, week)
+    st.markdown("---")
+    _render_expected_seed(base_df, year, week)
