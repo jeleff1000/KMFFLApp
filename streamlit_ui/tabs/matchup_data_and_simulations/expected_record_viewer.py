@@ -1,4 +1,3 @@
-# expected_record_viewer.py
 import streamlit as st
 import pandas as pd
 from .matchups.weekly.weekly_matchup_overview import WeeklyMatchupDataViewer
@@ -78,18 +77,36 @@ def _render_expected_seed(base_df, year, week):
           .drop_duplicates(subset=['Manager'])
           .set_index('Manager')
           .sort_index())
+    # Add Actual Seed from Playoff Seed to Date if present
+    if 'Playoff Seed to Date' in week_df.columns:
+        actual_seed = (week_df[['Manager', 'Playoff Seed to Date']]
+                       .drop_duplicates(subset=['Manager'])
+                       .set_index('Manager')['Playoff Seed to Date']
+                       .rename('Actual Seed'))
+        df = df.join(actual_seed)
+    # Convert shuffle seed probabilities to numeric
     df[seed_cols] = df[seed_cols].apply(pd.to_numeric, errors='coerce')
     bye_source = [c for c in seed_cols if int(c.split('_')[1]) in (1, 2)]
     playoff_source = [c for c in seed_cols if int(c.split('_')[1]) <= 6]
     df['Bye%'] = df[bye_source].sum(axis=1).round(2) if bye_source else 0.0
     df['Playoff%'] = df[playoff_source].sum(axis=1).round(2) if playoff_source else 0.0
+    # Rename shuffle_x_seed -> x
     rename_map = {c: str(int(c.split('_')[1])) for c in seed_cols}
     df = df.rename(columns=rename_map)
     iteration_cols = sorted([c for c in df.columns if c.isdigit()], key=lambda x: int(x))
+    # Order columns (simulation iterations, Bye/Playoff %, Actual Seed last if present)
     ordered = iteration_cols + ['Bye%', 'Playoff%']
+    if 'Actual Seed' in df.columns:
+        ordered.append('Actual Seed')
+        df['Actual Seed'] = pd.to_numeric(df['Actual Seed'], errors='coerce')
     df = df[ordered]
-    df[df.select_dtypes(include='number').columns] = df.select_dtypes(include='number').round(2)
-    fmt = {c: '{:.2f}%' for c in ordered}
+    # Rounding
+    numeric_percent_cols = iteration_cols + ['Bye%', 'Playoff%']
+    df[numeric_percent_cols] = df[numeric_percent_cols].round(2)
+    # Styling: percent format for probability cols, raw int/float for Actual Seed
+    fmt = {c: '{:.2f}%' for c in numeric_percent_cols}
+    if 'Actual Seed' in df.columns:
+        fmt['Actual Seed'] = '{:.0f}'
     styled = (df.style
               .background_gradient(cmap='RdYlGn', subset=iteration_cols, axis=0)
               .format(fmt))
