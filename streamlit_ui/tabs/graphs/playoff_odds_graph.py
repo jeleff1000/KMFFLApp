@@ -98,11 +98,13 @@ class PlayoffOddsViewer:
             st.session_state.ts_year_range = (int(start_year), int(end_year))
             st.session_state.ts_week_range = (int(start_week), int(end_week))
 
-        clear = st.button("Clear", key="clear_graph")
-        if clear:
-            st.session_state.ts_data = None
-            st.session_state.ts_year_range = None
-            st.session_state.ts_week_range = None
+        # Replace Clear button with a Champions Only checkbox (default off)
+        champions_only = st.checkbox(
+            "Champions Only",
+            value=False,
+            key="champions_only_checkbox",
+            help="Show only rows where Champion == 1",
+        )
 
         if (
             st.session_state.ts_data is None
@@ -113,6 +115,11 @@ class PlayoffOddsViewer:
             return
 
         timeseries = st.session_state.ts_data
+
+        # Apply champions-only filter dynamically
+        if champions_only:
+            timeseries = timeseries[timeseries["Champion"] == 1]
+
         if timeseries.empty:
             st.info("No data for selected filters.")
             return
