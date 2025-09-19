@@ -18,6 +18,7 @@ class PlayoffOddsViewer:
     def display(self):
         st.subheader("Odds Over Time")
 
+        # Keep all weeks; still exclude consolation
         df = self.df[(self.df["is_consolation"] == 0)].copy()
         seasons = sorted(df["year"].unique())
         if not seasons:
@@ -52,13 +53,9 @@ class PlayoffOddsViewer:
         )
         go_clicked = col4.button("Go", key="go_graph")
 
-        # Week range boxes (based on non-playoff weeks observed)
-        regular_df = df[df["is_playoffs"] == 0]
-        if regular_df.empty:
-            st.info("No regular-season weeks available.")
-            return
-        min_week = int(regular_df["week"].min())
-        max_week = int(regular_df["week"].max())
+        # Week range boxes (based on ALL weeks observed, including playoffs)
+        min_week = int(df["week"].min())
+        max_week = int(df["week"].max())
 
         wcol1, wcol2 = st.columns([1, 1])
         start_week = wcol1.number_input(
@@ -94,7 +91,6 @@ class PlayoffOddsViewer:
             timeseries = df[
                 (df["year"] >= int(start_year))
                 & (df["year"] <= int(end_year))
-                & (df["is_playoffs"] == 0)
                 & (df["week"] >= int(start_week))
                 & (df["week"] <= int(end_week))
             ].copy()
@@ -134,6 +130,9 @@ class PlayoffOddsViewer:
         if plot_df.empty:
             st.info("No data for selected managers.")
             return
+
+        # Ensure clean line ordering within season
+        plot_df = plot_df.sort_values(["Manager", "year", "week"], kind="mergesort")
 
         fig = px.line(
             plot_df,
