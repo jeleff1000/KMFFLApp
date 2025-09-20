@@ -230,7 +230,7 @@ def _combo_projection_message(
         )
     if (w, a, pw, ats) == (1, 1, 0, 1):
         return (
-            f"Everyone doubted you but you pulled through! You won despite the odds makers only giving you a {odds_pct} chance of winning at the beginning of the week. "
+            f"Everyone doubted you but you pulled through! You won despite the oddsmakers only giving you a {odds_pct} chance of winning at the beginning of the week. "
             f"You exceeded your projected score by {proj_err_pos_str} and stepped up for a big win!"
         )
     if (w, a, pw, ats) == (1, 1, 1, 0):
@@ -338,26 +338,24 @@ def display_weekly_recap(
     st.markdown(final_line)
 
     mean_line = f"The weekly mean was {_fmt_number(weekly_mean)} and the weekly median was {_fmt_number(weekly_median)}."
-    luck_msg = None
-    if teams_beat is not None:
-        if did_win and teams_beat <= 4:
-            luck_msg = None
-            abl_flag = _flag(_val(row, col_above_league_median, None))
-            if abl_flag is not None:
-                if did_win and abl_flag == 0:
-                    luck_msg = "Lucky win! You were outscored by over half the league and still won!"
-                elif (not did_win) and abl_flag == 0:
-                    luck_msg = "Can't blame the schedule on this loss. Most teams would have beat you this week."
-                elif (not did_win) and abl_flag == 1:
-                    luck_msg = "Unlucky! You were better than most teams this week and still lost!"
-                elif did_win and abl_flag == 1:
-                    luck_msg = "You deserved this win! You were better than most teams this week and won!"
-            if luck_msg:
-                mean_line += f" {luck_msg}"
 
+    # Use only above_league_median to show a luck tag for everyone
+    luck_msg = None
     abl_flag = _flag(_val(row, col_above_league_median, None))
     if abl_flag is not None:
-     st.markdown(mean_line)
+        if did_win and abl_flag == 0:
+            luck_msg = "Lucky win! You were outscored by over half the league and still won!"
+        elif (not did_win) and abl_flag == 0:
+            luck_msg = "Can't blame the schedule on this loss. Most teams would have beat you this week."
+        elif (not did_win) and abl_flag == 1:
+            luck_msg = "Unlucky! You were better than most teams this week and still lost!"
+        elif did_win and abl_flag == 1:
+            luck_msg = "You deserved this win! You would have beaten over half the league this week!"
+
+    if luck_msg:
+        mean_line += f" {luck_msg}"
+
+    st.markdown(mean_line)
 
     proj_msg = _combo_projection_message(
         row=row,

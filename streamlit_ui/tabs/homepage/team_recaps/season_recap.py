@@ -179,7 +179,7 @@ def display_season_recap(
     seed_msg = None
     if seed_to_date is not None:
         if 1 <= seed_to_date <= 2:
-            seed_msg = "Good job getting bye week position! You can smell that championship!"
+            seed_msg = "Good job getting yourself in position for a bye week! You can smell that championship!"
         elif 3 <= seed_to_date <= 6:
             seed_msg = "Good job getting in playoff position! Keep it up!"
         elif seed_to_date >= 7:
