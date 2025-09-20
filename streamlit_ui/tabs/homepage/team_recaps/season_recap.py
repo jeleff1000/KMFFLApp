@@ -265,7 +265,7 @@ def display_season_recap(
         elif sp_pct < 50 and seed_to_date >= 7:
             shuffle_msg = "Next time, try and score more points. Ok?"
         elif sp_pct > 50 and seed_to_date <= 6:
-            shuffle_msg = "You earned your playoff spot! Keep it up"
+            shuffle_msg = "You earned your spot in the standings! Keep it up"
         elif sp_pct < 50 and seed_to_date <= 6:
             shuffle_msg = "But hey, you're living in the real world. Don't listen to the haters, they're just jealous."
     line3b = (
