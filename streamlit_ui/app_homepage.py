@@ -31,7 +31,7 @@ def load_parquet_dfs():
         "Injury Data": "Sheet 2.0_Injury Data.parquet",
         "Schedules": "Sheet 2.0_Schedules.parquet",
         "All Transactions": "Sheet 2.0_All Transactions.parquet",
-        "Draft": "Sheet 2.0_Draft History.parquet",
+        "Draft History": "Sheet 2.0_Draft History.parquet",
         "Player Data": "Sheet 2.0_Player Data.parquet",
         "Matchup Data": "Sheet 2.0_Matchup Data.parquet",
     }
