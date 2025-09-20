@@ -155,15 +155,19 @@ def main():
                 elif tab_name == "Draft":
                     display_draft_data_overview(df_dict)
 
+
+                # python
+
                 elif tab_name == "Transactions":
                     transaction_data = df_dict.get("All Transactions")
                     player_data = df_dict.get("Player Data")
                     injury_data = df_dict.get("Injury Data")
-                    draft_history_data = df_dict.get("Draft")
+                    draft_history_data = df_dict.get("Draft History")
                     if all(x is not None for x in [transaction_data, player_data, injury_data, draft_history_data]):
                         AllTransactionsViewer(transaction_data, player_data, injury_data, draft_history_data).display()
                     else:
                         st.error("Transaction data not found.")
+
 
                 elif tab_name == "Simulations":
                     st.header("Simulations")
