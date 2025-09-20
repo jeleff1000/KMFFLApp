@@ -189,6 +189,8 @@ def _combo_projection_message(
 
     # Pull numeric fields
     expected_odds = _val(row, col_expected_odds, None)
+    expected_odds_num = _to_float(expected_odds, None)
+
     expected_spread = _to_float(_val(row, col_expected_spread, None), None)
     margin = _to_float(_val(row, col_margin, None), None)
     proj_err = _to_float(_val(row, col_proj_score_err, None), None)
@@ -196,21 +198,27 @@ def _combo_projection_message(
     if abs_proj_err is None and proj_err is not None:
         abs_proj_err = abs(proj_err)
 
-    # Preformatted strings (apply `*100` and `*-1` semantic where needed)
-    odds_pct = _fmt_percent(expected_odds)  # handles 0..1 or already-in-percent
+    # Preformatted strings (apply *100 and sign flips where needed)
+    odds_pct = _fmt_percent(expected_odds)  # supports 0..1 or 0..100 input
+    if expected_odds_num is None:
+        inv_odds_pct = "N/A"
+    else:
+        inv_odds_pct = _fmt_percent(1 - expected_odds_num) if 0.0 <= expected_odds_num <= 1.0 else _fmt_percent(100 - expected_odds_num)
+
     spread_str = _fmt_number(expected_spread) if expected_spread is not None else "N/A"
     spread_flip_str = _fmt_number(-expected_spread) if expected_spread is not None else "N/A"
     margin_pos_str = _fmt_number(abs(margin)) if margin is not None else "N/A"
     proj_err_pos_str = _fmt_number(abs(proj_err)) if proj_err is not None else "N/A"
-    abs_proj_err_str = _fmt_number(abs_proj_err) if abs_proj_err is not None else "N/A"
+    abs_proj_err_str = _fmt_number(abs(abs_proj_err)) if abs_proj_err is not None else "N/A"
 
     w, a, pw, ats = win_flag, above_flag, projwin_flag, winats_flag
 
     # 12 specified combinations
     if (w, a, pw, ats) == (0, 0, 0, 0):
+        # CHANGED: use inv_odds_pct (opponent's favorite percentage = 100% - odds_pct)
         return (
             f"The haters said you couldn't do it and the haters were right! Shout out to the haters! "
-            f"We expected you to lose, but not like this. When you saw {opponent} was an {odds_pct} favorite, "
+            f"We expected you to lose, but not like this. When you saw {opponent} was a {inv_odds_pct} favorite, "
             f"you guys just decided to pack it in losing by {margin_pos_str} compared to the {spread_flip_str} point spread going into the week. "
             f"Maybe a players-only meeting can sort out this debacle."
         )
@@ -223,7 +231,7 @@ def _combo_projection_message(
         )
     if (w, a, pw, ats) == (0, 0, 1, 0):
         return (
-            f"Now I know this one hurts. You had a {odds_pct} chance of winning this matchup going into the week and then… well I don't need to tell you what happened. "
+            f"Now I know this one hurts. You had a {inv_odds_pct} chance of winning this matchup going into the week and then… well I don't need to tell you what happened. "
             f"You lost by {margin_pos_str} when you were expected to win by {spread_str}. "
             f"You even missed your personal projections by {abs_proj_err_str}. Scrap that entire gameplan because you won't make it far playing like this."
         )
@@ -239,7 +247,7 @@ def _combo_projection_message(
         )
     if (w, a, pw, ats) == (0, 1, 1, 0):
         return (
-            f"{opponent} had something to prove this week! You deserveed better. "
+            f"{opponent} had something to prove this week! You deserved better. "
             f"You beat your projection by {proj_err_pos_str} but still lost a game where you were favored. Just remember, defense wins championships."
         )
     if (w, a, pw, ats) == (1, 0, 0, 1):
@@ -279,7 +287,7 @@ def _combo_projection_message(
 def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
     matchup_df = _get_matchup_df(df_dict)
     st.subheader("Date Selection")
-    mode = st.radio("Mode", options=["Start from Today's Date", "Choose a Date"], horizontal=True)
+    mode = st.radio("", options=["Start from Today's Date", "Choose a Date"], horizontal=True)
 
     selected_year: Optional[int] = None
     selected_week: Optional[int] = None
@@ -316,9 +324,11 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
 
     st.subheader("Manager Selection")
     manager_options = _manager_options(matchup_df) if matchup_df is not None else []
-    manager_choices = ["All Managers"] + manager_options if manager_options else ["All Managers"]
-    selected_manager_label = st.selectbox("Select Manager", options=manager_choices, index=0)
-    selected_manager: Optional[str] = None if selected_manager_label == "All Managers" else selected_manager_label
+    if not manager_options:
+        st.info("No managers found in the dataset.")
+        return
+    # REMOVED: "All Managers" option; user must pick a specific manager
+    selected_manager = st.selectbox("Select Manager", options=manager_options, index=0)
 
     st.session_state["weekly_recap_selection"] = {
         "year": selected_year,
@@ -331,9 +341,6 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
 
     if matchup_df is None:
         st.info("No `Matchup Data` dataset available.")
-        return
-    if selected_manager is None:
-        st.info("Select a Manager to view the recap.")
         return
 
     df = matchup_df.copy()
