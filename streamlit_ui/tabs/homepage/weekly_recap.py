@@ -224,7 +224,7 @@ def _combo_projection_message(
     if (w, a, pw, ats) == (0, 0, 1, 0):
         return (
             f"Now I know this one hurts. You had a {odds_pct} chance of winning this matchup going into the week and then… well I don't need to tell you what happened. "
-            f"You lost by {margin_pos_str}, even more than the projected margin of {spread_flip_str}. "
+            f"You lost by {margin_pos_str} when you were expected to win by {spread_str}. "
             f"You even missed your personal projections by {abs_proj_err_str}. Scrap that entire gameplan because you won't make it far playing like this."
         )
     if (w, a, pw, ats) == (0, 1, 0, 0):
