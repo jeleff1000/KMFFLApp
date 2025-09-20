@@ -1,201 +1,505 @@
-import streamlit as st
+from typing import Any, Dict, Optional
+from datetime import datetime
+import re
+
 import pandas as pd
+import streamlit as st
 
-class H2HViewer:
-    def __init__(self, filtered_data, matchup_data):
-        self.filtered_data = filtered_data
-        self.matchup_data = matchup_data
 
-    def get_matchup_names(self):
-        if 'matchup_name' in self.filtered_data.columns:
-            return self.filtered_data[['matchup_name']].drop_duplicates()
-        else:
-            raise KeyError("The required column 'matchup_name' is missing in filtered_data.")
+def _as_dataframe(obj: Any) -> Optional[pd.DataFrame]:
+    if isinstance(obj, pd.DataFrame):
+        return obj
+    try:
+        if isinstance(obj, (list, tuple)) and obj and isinstance(obj[0], dict):
+            return pd.DataFrame(obj)
+        if isinstance(obj, dict):
+            return pd.DataFrame(obj)
+    except Exception:
+        return None
+    return None
 
-    def display(self, prefix):
-        self.filtered_data['season'] = self.filtered_data['season'].fillna(0).astype(int)
-        self.matchup_data['year'] = self.matchup_data['year'].fillna(0).astype(int)
 
-        merged_data = pd.merge(
-            self.filtered_data,
-            self.matchup_data,
-            left_on=['owner', 'week', 'season', 'opponent'],
-            right_on=['Manager', 'week', 'year', 'opponent'],
-            how='inner'
+def _get_matchup_df(df_dict: Optional[Dict[Any, Any]]) -> Optional[pd.DataFrame]:
+    if not isinstance(df_dict, dict):
+        return None
+    if "Matchup Data" in df_dict:
+        return _as_dataframe(df_dict["Matchup Data"])
+    for k, v in df_dict.items():
+        if str(k).strip().lower() == "matchup data":
+            return _as_dataframe(v)
+    return None
+
+
+def _unique_numeric(df: pd.DataFrame, col: str) -> list[int]:
+    if col not in df.columns:
+        return []
+    ser = pd.to_numeric(df[col], errors="coerce").dropna().astype(int)
+    return sorted(ser.unique().tolist())
+
+
+def _weeks_for_year(df: pd.DataFrame, year: int) -> list[int]:
+    if not {"year", "week"}.issubset(set(df.columns)):
+        return []
+    df_yr = df[pd.to_numeric(df["year"], errors="coerce").astype("Int64") == year]
+    if df_yr.empty:
+        return []
+    return _unique_numeric(df_yr, "week")
+
+
+def _find_manager_column(df: pd.DataFrame) -> Optional[str]:
+    preferred = [
+        "manager", "manager_name", "owner", "owner_name",
+        "team_owner", "team_manager",
+    ]
+    cols_lower = {str(c).strip().lower(): c for c in df.columns}
+    for p in preferred:
+        if p in cols_lower:
+            return cols_lower[p]
+    for lower, original in cols_lower.items():
+        if "manager" in lower or "owner" in lower:
+            return original
+    return None
+
+
+def _manager_options(df: pd.DataFrame) -> list[str]:
+    col = _find_manager_column(df)
+    if not col:
+        return []
+    try:
+        ser = df[col].astype(str).str.strip()
+    except Exception:
+        return []
+    ser = ser[(ser.notna()) & (ser != "")]
+    opts = sorted(set(ser.tolist()), key=lambda x: x.lower())
+    return opts
+
+
+def _norm(s: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", str(s).lower().strip())
+
+
+def _find_col(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
+    norm_map = {_norm(c): c for c in df.columns}
+    for cand in candidates:
+        key = _norm(cand)
+        if key in norm_map:
+            return norm_map[key]
+    return None
+
+
+def _val(row: pd.Series, col: Optional[str], default=None):
+    if not col:
+        return default
+    try:
+        v = row[col]
+        if pd.isna(v):
+            return default
+        return v
+    except Exception:
+        return default
+
+
+def _to_int(v, default=None) -> Optional[int]:
+    try:
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            return default
+        return int(float(v))
+    except Exception:
+        return default
+
+
+def _to_float(v, default=None) -> Optional[float]:
+    try:
+        if v is None or (isinstance(v, float) and pd.isna(v)):
+            return default
+        return float(v)
+    except Exception:
+        return default
+
+
+def _flag(v) -> Optional[int]:
+    # Return 1 for truthy, 0 for falsy, None if unknown.
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return None
+    if isinstance(v, bool):
+        return 1 if v else 0
+    try:
+        f = float(v)
+        if not pd.isna(f):
+            return 1 if int(f) != 0 else 0
+    except Exception:
+        pass
+    s = str(v).strip().lower()
+    if s in {"true", "t", "yes", "y", "win", "w"}:
+        return 1
+    if s in {"false", "f", "no", "n", "loss", "l"}:
+        return 0
+    return None
+
+
+def _fmt_points(v) -> str:
+    f = _to_float(v, None)
+    if f is None:
+        return "N/A"
+    return f"{f:.1f}".rstrip("0").rstrip(".")
+
+
+def _fmt_number(v) -> str:
+    f = _to_float(v, None)
+    if f is None:
+        return "N/A"
+    return f"{f:.2f}".rstrip("0").rstrip(".")
+
+
+def _fmt_percent(v) -> str:
+    f = _to_float(v, None)
+    if f is None:
+        return "N/A"
+    pct = f * 100.0 if 0.0 <= f <= 1.0 else f
+    return f"{pct:.1f}%".replace(".0%", "%")
+
+
+def _fmt_abs_number(v) -> str:
+    f = _to_float(v, None)
+    if f is None:
+        return "N/A"
+    return _fmt_number(abs(f))
+
+
+def _combo_projection_message(
+    row: pd.Series,
+    opponent: str,
+    col_win: Optional[str],
+    col_above_proj: Optional[str],
+    col_projected_wins: Optional[str],
+    col_win_ats: Optional[str],
+    col_expected_odds: Optional[str],
+    col_expected_spread: Optional[str],
+    col_margin: Optional[str],
+    col_proj_score_err: Optional[str],
+    col_abs_proj_score_err: Optional[str],
+) -> Optional[str]:
+    # Resolve required flags
+    win_flag = _flag(_val(row, col_win, None))
+    above_flag = _flag(_val(row, col_above_proj, None))
+    projwin_flag = _flag(_val(row, col_projected_wins, None))
+    winats_flag = _flag(_val(row, col_win_ats, None))
+    if None in (win_flag, above_flag, projwin_flag, winats_flag):
+        return None
+
+    # Pull numeric fields
+    expected_odds = _val(row, col_expected_odds, None)
+    expected_spread = _to_float(_val(row, col_expected_spread, None), None)
+    margin = _to_float(_val(row, col_margin, None), None)
+    proj_err = _to_float(_val(row, col_proj_score_err, None), None)
+    abs_proj_err = _to_float(_val(row, col_abs_proj_score_err, None), None)
+    if abs_proj_err is None and proj_err is not None:
+        abs_proj_err = abs(proj_err)
+
+    # Preformatted strings (apply `*100` and `*-1` semantic where needed)
+    odds_pct = _fmt_percent(expected_odds)  # handles 0..1 or already-in-percent
+    spread_str = _fmt_number(expected_spread) if expected_spread is not None else "N/A"
+    spread_flip_str = _fmt_number(-expected_spread) if expected_spread is not None else "N/A"
+    margin_pos_str = _fmt_number(abs(margin)) if margin is not None else "N/A"
+    proj_err_pos_str = _fmt_number(abs(proj_err)) if proj_err is not None else "N/A"
+    abs_proj_err_str = _fmt_number(abs_proj_err) if abs_proj_err is not None else "N/A"
+
+    w, a, pw, ats = win_flag, above_flag, projwin_flag, winats_flag
+
+    # 12 specified combinations
+    if (w, a, pw, ats) == (0, 0, 0, 0):
+        return (
+            f"The haters said you couldn't do it and the haters were right! Shout out to the haters! "
+            f"We expected you to lose, but not like this. When you saw {opponent} was an {odds_pct} favorite, "
+            f"you guys just decided to pack it in losing by {margin_pos_str} compared to the {spread_flip_str} point spread going into the week. "
+            f"Maybe a players-only meeting can sort out this debacle."
+        )
+    if (w, a, pw, ats) == (0, 0, 0, 1):
+        return (
+            f"{opponent} knew he could go easy on you this week and you proved him right. "
+            f"Sure your {margin_pos_str} point loss was closer than the {spread_flip_str} spread going into the week, but you still lost. "
+            f"You missed your personal projection by {abs_proj_err_str}. "
+            f"You lost but at least you kept it close? Not much good to take from this one. They are who you thought they were! And you let them off the hook!"
+        )
+    if (w, a, pw, ats) == (0, 0, 1, 0):
+        return (
+            f"Now I know this one hurts. You had a {odds_pct} chance of winning this matchup going into the week and then… well I don't need to tell you what happened. "
+            f"You lost by {margin_pos_str}, even more than the projected margin of {spread_flip_str}. "
+            f"You even missed your personal projections by {abs_proj_err_str}. Scrap that entire gameplan because you won't make it far playing like this."
+        )
+    if (w, a, pw, ats) == (0, 1, 0, 0):
+        return (
+            f"You gave it your best but {opponent}'s best was better. "
+            f"You exceeded your projected score by {proj_err_pos_str}. Goliath beat David this week but at least you gave it your all."
+        )
+    if (w, a, pw, ats) == (0, 1, 0, 1):
+        return (
+            f"You came out fighting this week. The projections had you losing by {spread_flip_str} but you got this game pretty close. "
+            f"Only losing by {margin_pos_str}. You exceeded your projections by {proj_err_pos_str} just not enough to pull off the upset."
+        )
+    if (w, a, pw, ats) == (0, 1, 1, 0):
+        return (
+            f"{opponent} had something to prove this week! You deserveed better. "
+            f"You beat your projection by {proj_err_pos_str} but still lost a game where you were favored. Just remember, defense wins championships."
+        )
+    if (w, a, pw, ats) == (1, 0, 0, 1):
+        return (
+            f"Sometimes your opponent decides to help you out. Despite a {odds_pct} chance of winning coming into the week and "
+            f"missing your expected point total by {abs_proj_err_str}, you still came away with the victory. Way to go!"
+        )
+    if (w, a, pw, ats) == (1, 0, 1, 0):
+        return (
+            f"The great teams can win ugly. Sure you only won by {margin_pos_str} compared to the {spread_str} margin entering the week, "
+            f"but hey a win is a win!"
+        )
+    if (w, a, pw, ats) == (1, 0, 1, 1):
+        return (
+            f"Did you and {opponent} agree to take it easy on each other this week? "
+            f"You missed your projected score by {abs_proj_err_str} but still came away with the {margin_pos_str} point victory. Way to go!"
+        )
+    if (w, a, pw, ats) == (1, 1, 0, 1):
+        return (
+            f"Everyone doubted you but you pulled through! You won despite the odds makers only giving you a {odds_pct} chance of winning at the beginning of the week. "
+            f"You exceeded your projected score by {proj_err_pos_str} and stepped up for a big win!"
+        )
+    if (w, a, pw, ats) == (1, 1, 1, 0):
+        return (
+            f"{opponent} gave you everything they got but it wasn't enough to stop your boys. "
+            f"Sure you only won by {margin_pos_str} but close only counts in horseshoes and grenades."
+        )
+    if (w, a, pw, ats) == (1, 1, 1, 1):
+        return (
+            f"You exceeded your lofty expectations! You had a {odds_pct} chance of winning and won by {margin_pos_str}, "
+            f"we had you pegged for a {spread_str} point favorite going into the week."
         )
 
-        required_cols = [
-            'team_1', 'team_2', 'lineup_position', 'player', 'points',
-            'fantasy position', 'owner', 'headshot_url'
-        ]
-        if all(col in merged_data.columns for col in required_cols):
-            default_image_url = "https://static.www.nfl.com/image/private/f_auto,q_auto/league/mdrlzgankwwjldxllgcx"
+    return None
 
-            team_1_data = merged_data[merged_data['owner'] == merged_data['team_1']][
-                ['team_1', 'lineup_position', 'player', 'points', 'fantasy position', 'headshot_url']
-            ].rename(columns={'player': 'player_1', 'points': 'points_1', 'headshot_url': 'headshot_url_1'})
 
-            team_2_data = merged_data[merged_data['owner'] == merged_data['team_2']][
-                ['team_2', 'lineup_position', 'player', 'points', 'headshot_url']
-            ].rename(columns={'player': 'player_2', 'points': 'points_2', 'headshot_url': 'headshot_url_2'})
+def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
+    matchup_df = _get_matchup_df(df_dict)
+    st.subheader("Date Selection")
+    mode = st.radio("Mode", options=["Start from Today's Date", "Choose a Date"], horizontal=True)
 
-            team_1_data['headshot_url_1'] = team_1_data['headshot_url_1'].fillna(default_image_url)
-            team_2_data['headshot_url_2'] = team_2_data['headshot_url_2'].fillna(default_image_url)
+    selected_year: Optional[int] = None
+    selected_week: Optional[int] = None
 
-            display_df = pd.merge(
-                team_1_data,
-                team_2_data,
-                on='lineup_position',
-                how='outer'
-            )
-
-            position_order = {
-                'QB1': 1, 'RB1': 2, 'RB2': 3, 'WR1': 4, 'WR2': 5, 'WR3': 6,
-                'TE1': 7, 'W/R/T1': 8, 'K1': 9, 'DEF1': 10
-            }
-
-            for position in position_order.keys():
-                if position not in display_df['lineup_position'].values:
-                    display_df = pd.concat([display_df, pd.DataFrame([{
-                        'lineup_position': position,
-                        'team_1': 'N/A',
-                        'player_1': 'N/A',
-                        'points_1': 0,
-                        'fantasy position': 'N/A',
-                        'headshot_url_1': default_image_url,
-                        'team_2': 'N/A',
-                        'player_2': 'N/A',
-                        'points_2': 0,
-                        'headshot_url_2': default_image_url
-                    }])], ignore_index=True)
-
-            display_df['position_order'] = display_df['lineup_position'].map(position_order)
-            display_df = display_df.sort_values(by=['position_order']).drop(columns=['position_order']).reset_index(drop=True)
-
-            display_df['margin_1'] = (display_df['points_1'] - display_df['points_2']).round(2)
-            display_df['margin_2'] = (display_df['points_2'] - display_df['points_1']).round(2)
-
-            display_df['points_1'] = display_df['points_1'].round(2)
-            display_df['points_2'] = display_df['points_2'].round(2)
-
-            team_1_name = display_df['team_1'].iloc[0] if not display_df['team_1'].isna().all() else "Team 1"
-            team_2_name = display_df['team_2'].iloc[0] if not display_df['team_2'].isna().all() else "Team 2"
-
-            main_positions = ['QB', 'RB', 'WR', 'TE', 'W/R/T', 'K', 'DEF']
-            bench_ir_positions = ['BN', 'IR']
-
-            main_df = display_df[display_df['fantasy position'].isin(main_positions)].reset_index(drop=True)
-            bench_ir_df = display_df[display_df['fantasy position'].isin(bench_ir_positions)].reset_index(drop=True)
-
-            total_points_1 = main_df['points_1'].sum()
-            total_points_2 = main_df['points_2'].sum()
-            total_row = {
-                'player_1': 'Total',
-                'points_1': round(total_points_1, 2),
-                'fantasy position': '',
-                'points_2': round(total_points_2, 2),
-                'player_2': '',
-                'headshot_url_1': '',
-                'headshot_url_2': ''
-            }
-            main_df = pd.concat([main_df, pd.DataFrame([total_row])], ignore_index=True)
-
-            self.render_table(main_df, team_1_name, team_2_name, color_coding=True)
-            self.render_table(bench_ir_df, team_1_name, team_2_name, color_coding=False)
+    if mode == "Start from Today's Date":
+        if matchup_df is not None:
+            years = _unique_numeric(matchup_df, "year")
+            if years:
+                selected_year = max(years)
+                weeks = _weeks_for_year(matchup_df, selected_year)
+                selected_week = max(weeks) if weeks else None
+        if selected_year is None:
+            selected_year = datetime.now().year
+        if selected_week is None:
+            selected_week = 1
+        st.caption(f"Selected Year: {selected_year} — Week: {selected_week}")
+    else:
+        if matchup_df is not None:
+            years = _unique_numeric(matchup_df, "year") or [datetime.now().year]
         else:
-            st.write("The required columns are not available in the data.")
+            years = [datetime.now().year]
+        col_year, col_week = st.columns(2)
+        with col_year:
+            selected_year = st.selectbox("Year", options=years, index=len(years) - 1)
+        if matchup_df is not None:
+            weeks = _weeks_for_year(matchup_df, selected_year) or _unique_numeric(matchup_df, "week")
+            if not weeks:
+                weeks = list(range(1, 19))
+        else:
+            weeks = list(range(1, 19))
+        with col_week:
+            selected_week = st.selectbox("Week", options=weeks, index=len(weeks) - 1)
+        st.caption(f"Selected Year: {selected_year} — Week: {selected_week}")
 
-    def render_table(self, df, team_1_name, team_2_name, color_coding):
-        st.markdown(
-            f"""
-            <style>
-            table {{
-                width: 100%;
-                border-collapse: collapse;
-            }}
-            th, td {{
-                border: 1px solid black;
-                padding: 8px;
-                text-align: center;
-            }}
-            th {{
-                background-color: #f2f2f2;
-            }}
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
+    st.subheader("Manager Selection")
+    manager_options = _manager_options(matchup_df) if matchup_df is not None else []
+    manager_choices = ["All Managers"] + manager_options if manager_options else ["All Managers"]
+    selected_manager_label = st.selectbox("Select Manager", options=manager_choices, index=0)
+    selected_manager: Optional[str] = None if selected_manager_label == "All Managers" else selected_manager_label
 
-        table_html = f"<table><thead><tr>"
-        table_html += f"<th colspan='2' style='text-align: center; font-weight: bold; font-size: 16px;'>{team_1_name}</th>"
-        table_html += f"<th style='text-align: center; font-weight: bold; font-size: 16px;'>vs</th>"
-        table_html += f"<th colspan='2' style='text-align: center; font-weight: bold; font-size: 16px;'>{team_2_name}</th>"
-        table_html += "</tr></thead><tbody>"
+    st.session_state["weekly_recap_selection"] = {
+        "year": selected_year,
+        "week": selected_week,
+        "manager": selected_manager,
+    }
 
-        if color_coding and 'margin_1' in df.columns and 'margin_2' in df.columns:
-            global_margin_min = min(df['margin_1'].min(), df['margin_2'].min())
-            global_margin_max = max(df['margin_1'].max(), df['margin_2'].max())
+    st.divider()
+    st.subheader("Weekly Recap")
 
-        for _, row in df.iterrows():
-            if color_coding and row.get('player_1', '') != 'Total' and 'margin_1' in row and 'margin_2' in row:
-                margin_1_color = f"rgb({255 - int(200 * (row['margin_1'] - global_margin_min) / (global_margin_max - global_margin_min))}, {int(200 * (row['margin_1'] - global_margin_min) / (global_margin_max - global_margin_min)) + 55}, 55)"
-                margin_2_color = f"rgb({255 - int(200 * (row['margin_2'] - global_margin_min) / (global_margin_max - global_margin_min))}, {int(200 * (row['margin_2'] - global_margin_min) / (global_margin_max - global_margin_min)) + 55}, 55)"
-                points_1_color = margin_1_color
-                points_2_color = margin_2_color
-            else:
-                points_1_color = "white"
-                points_2_color = "white"
-
-            table_html += "<tr>"
-            table_html += f"<td><img src='{row.get('headshot_url_1', '')}' width='50'><br>{row.get('player_1', '')}</td>"
-            table_html += f"<td style='background-color: {points_1_color}; font-weight: bold; color: black;'>{row.get('points_1', '')}</td>"
-            table_html += f"<td>{row.get('fantasy position', '')}</td>"
-            table_html += f"<td style='background-color: {points_2_color}; font-weight: bold; color: black;'>{row.get('points_2', '')}</td>"
-            table_html += f"<td><img src='{row.get('headshot_url_2', '')}' width='50'><br>{row.get('player_2', '')}</td>"
-            table_html += "</tr>"
-
-        table_html += "</tbody></table>"
-        st.markdown(table_html, unsafe_allow_html=True)
-
-def filter_h2h_data(player_data, year, week, matchup_name):
-    df = player_data.copy()
-    if year is not None:
-        df = df[df['season'] == int(year)]
-    if week is not None:
-        df = df[df['week'] == int(week)]
-    if matchup_name is not None:
-        df = df[df['matchup_name'] == matchup_name]
-    return df
-
-def display_head_to_head(df_dict):
-    player_data = df_dict.get("Player Data")
-    matchup_data = df_dict.get("Matchup Data")
-    if player_data is None or matchup_data is None:
-        st.write("Player Data or Matchup Data not found.")
+    if matchup_df is None:
+        st.info("No `Matchup Data` dataset available.")
+        return
+    if selected_manager is None:
+        st.info("Select a Manager to view the recap.")
         return
 
-    key_prefix = "h2h_head_to_head_"
+    df = matchup_df.copy()
 
-    years = sorted(player_data['season'].dropna().unique())
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 0.5])
-    with col1:
-        selected_year = st.selectbox("Select Year", years, key=f"{key_prefix}year_value")
-    with col2:
-        filtered_weeks = player_data[player_data['season'] == selected_year]['week'].dropna().unique()
-        selected_week = st.selectbox("Select Week", sorted(filtered_weeks),
-                                     key=f"{key_prefix}week_value") if selected_year else None
-    with col3:
-        filtered_matchups = player_data[
-            (player_data['season'] == selected_year) & (player_data['week'] == selected_week)
-            ]['matchup_name'].dropna().unique()
-        selected_matchup_name = st.selectbox("Select Matchup Name", sorted(filtered_matchups),
-                                             key=f"{key_prefix}matchup_name_value") if selected_year and selected_week else None
-    with col4:
-        go_button = st.button("Go", key=f"{key_prefix}go_button")
+    # Column resolutions
+    col_year = _find_col(df, ["year"])
+    col_week = _find_col(df, ["week"])
+    col_manager = _find_manager_column(df)
 
-    if go_button and selected_year and selected_week and selected_matchup_name:
-        filtered_h2h = filter_h2h_data(player_data, selected_year, selected_week, selected_matchup_name)
-        viewer = H2HViewer(filtered_h2h, matchup_data)
-        viewer.display(prefix="h2h")
-    elif not go_button:
-        st.write("Please select a year, week, and matchup name, then click 'Go' to view H2H data.")
+    col_opponent = _find_col(df, ["opponent", "opponent_team", "opp"])
+    col_team_points = _find_col(df, ["team_points", "team score", "score", "points_for", "points for"])
+    col_opponent_score = _find_col(df, ["opponent score", "opponent_score", "opp_points", "points_against", "points against", "opp score"])
+
+    col_weekly_mean = _find_col(df, ["weekly_mean", "week_mean", "league_week_mean"])
+    col_weekly_median = _find_col(df, ["weekly_median", "week_median", "league_week_median"])
+    col_teams_beat = _find_col(df, ["teams_beat_this_week", "teams beat this week", "would_beat"])
+
+    col_wins_to_date = _find_col(df, ["Wins to Date", "wins_to_date", "wins to date"])
+    col_losses_to_date = _find_col(df, ["Losses to Date", "losses_to_date", "losses to date"])
+    col_seed_to_date = _find_col(df, ["Playoff Seed to Date", "playoff_seed_to_date", "seed to date"])
+
+    col_avg_seed = _find_col(df, ["avg_seed", "average_seed"])
+    col_p_playoffs = _find_col(df, ["p_playoffs", "prob_playoffs", "p playoffs"])
+    col_p_champ = _find_col(df, ["p_champ", "prob_championship", "p champ"])
+
+    # Scenario flags
+    col_is_playoffs = _find_col(df, ["is_playoffs", "is playoffs", "is_playoff", "playoffs", "postseason", "is_postseason"])
+    col_win = _find_col(df, ["win", "won", "is_win", "is win", "result", "w"])
+    col_close_margin = _find_col(df, ["close_margin", "close margin", "is_close", "is close", "close_game", "close game", "nail_biter"])
+    # Above/below league median flag
+    col_above_league_median = _find_col(df, ["above_league_median", "above league median", "above_median", "above median"])
+
+    # New: projection-related columns
+    col_above_proj = _find_col(df, ["Above Projected Score", "above_projected_score", "above projected score", "above_proj", "above proj"])
+    col_projected_wins = _find_col(df, ["Projected Wins", "projected_wins", "is_favored", "favored", "favorite"])
+    col_win_ats = _find_col(df, ["Win Matchup Against the Spread", "win_matchup_against_the_spread", "win_ats", "covered", "cover", "beat_spread"])
+
+    col_expected_odds = _find_col(df, ["Expected Odds", "expected_odds", "win_probability", "proj_win_prob", "odds"])
+    col_expected_spread = _find_col(df, ["Expected Spread", "expected_spread", "proj_spread", "spread"])
+    col_margin = _find_col(df, ["margin", "score_margin", "point_diff", "points_diff", "margin_of_victory"])
+    col_proj_score_err = _find_col(df, ["Projected Score Error", "projected_score_error", "proj_score_error", "projection_error"])
+    col_abs_proj_score_err = _find_col(df, ["Absolute Value Projected Score Error", "absolute value projected score error", "abs_projected_score_error", "abs proj score error"])
+
+    # Filtering by selection
+    if col_year:
+        df = df[pd.to_numeric(df[col_year], errors="coerce").astype("Int64") == selected_year]
+    if col_week:
+        df = df[pd.to_numeric(df[col_week], errors="coerce").astype("Int64") == selected_week]
+    if col_manager:
+        df = df[df[col_manager].astype(str).str.strip() == str(selected_manager).strip()]
+
+    if df.empty:
+        st.warning("No record found for the selected Manager, Week, and Year.")
+        return
+
+    row = df.iloc[0]
+
+    opponent = _val(row, col_opponent, "Unknown")
+    team_pts = _val(row, col_team_points, None)
+    opp_pts = _val(row, col_opponent_score, None)
+
+    weekly_mean = _val(row, col_weekly_mean, None)
+    weekly_median = _val(row, col_weekly_median, None)
+    teams_beat = _to_int(_val(row, col_teams_beat, None), None)
+
+    wins_to_date = _to_int(_val(row, col_wins_to_date, None), None)
+    losses_to_date = _to_int(_val(row, col_losses_to_date, None), None)
+    seed_to_date = _to_int(_val(row, col_seed_to_date, None), None)
+
+    avg_seed = _val(row, col_avg_seed, None)
+    p_playoffs = _val(row, col_p_playoffs, None)
+    p_champ = _val(row, col_p_champ, None)
+
+    # Final score line + scenario message (inline)
+    final_line = f"The final score of your matchup against {opponent} was {_fmt_points(team_pts)} - {_fmt_points(opp_pts)}."
+    is_p = (_flag(_val(row, col_is_playoffs, None)) == 1)
+    did_win = (_flag(_val(row, col_win, None)) == 1)
+    close = (_flag(_val(row, col_close_margin, None)) == 1)
+
+    scenario_msg = None
+    if is_p and did_win and close:
+        scenario_msg = "Way to win a close game in the playoffs!"
+    elif is_p and did_win:
+        scenario_msg = "Congrats on the easy playoff win, never in doubt!"
+    elif is_p and close and not did_win:
+        scenario_msg = "Lost your playoff game in a nail-biter, better luck next year!"
+    elif did_win and close:
+        scenario_msg = "Way to win a nail-biter!"
+    elif close and not did_win:
+        scenario_msg = "Tough way to lose, you'll get 'em next time!"
+    elif is_p and not did_win:
+        scenario_msg = "You were so close to that championship, you'll win next year for sure!"
+    elif did_win:
+        scenario_msg = "You smoked 'em!"
+    if scenario_msg:
+        final_line += f" {scenario_msg}"
+    st.markdown(final_line)
+
+    # Mean/median + luck + above/below league median (inline)
+    mean_line = f"The weekly mean was {_fmt_number(weekly_mean)} and the weekly median was {_fmt_number(weekly_median)}."
+
+    luck_msg = None
+    if teams_beat is not None:
+        if did_win and teams_beat <= 4:
+            luck_msg = "Lucky win!"
+        elif (not did_win) and teams_beat <= 4:
+            luck_msg = "Can't blame the schedule on this loss"
+        elif (not did_win) and teams_beat >= 5:
+            luck_msg = "Unlucky!"
+        elif did_win and teams_beat >= 5:
+            luck_msg = "You deserved this win!"
+    if luck_msg:
+        mean_line += f" {luck_msg}"
+
+    abl_flag = _flag(_val(row, col_above_league_median, None))
+    if abl_flag is not None:
+        mean_line += " Your score was above the league median." if abl_flag == 1 else " Your score was below the league median."
+
+    st.markdown(mean_line)
+
+    # New: projection combo message paragraph
+    proj_msg = _combo_projection_message(
+        row=row,
+        opponent=str(opponent),
+        col_win=col_win,
+        col_above_proj=col_above_proj,
+        col_projected_wins=col_projected_wins,
+        col_win_ats=col_win_ats,
+        col_expected_odds=col_expected_odds,
+        col_expected_spread=col_expected_spread,
+        col_margin=col_margin,
+        col_proj_score_err=col_proj_score_err,
+        col_abs_proj_score_err=col_abs_proj_score_err,
+    )
+    if proj_msg:
+        st.markdown(proj_msg)
+
+    # Remaining recap lines
+    st.markdown(
+        f"So far your record is {wins_to_date if wins_to_date is not None else 'N/A'} - "
+        f"{losses_to_date if losses_to_date is not None else 'N/A'} and you would be the "
+        f"{seed_to_date if seed_to_date is not None else 'N/A'} seed in the playoffs if the season ended today."
+    )
+    st.markdown(
+        f"Based on current projections you are expected to finish the season with a projected final seed of "
+        f"{_fmt_number(avg_seed)}, a {_fmt_percent(p_playoffs)} chance of making the postseason, and "
+        f"{_fmt_percent(p_champ)} chance of winning the championship."
+    )
+
+    # Bottom: raw data browser
+    st.divider()
+    st.caption("Data ↓")
+    if not isinstance(df_dict, dict) or not df_dict:
+        st.info("No dataset available.")
+        return
+    dfs: Dict[str, pd.DataFrame] = {}
+    for k, v in df_dict.items():
+        df2 = _as_dataframe(v)
+        if df2 is not None:
+            dfs[str(k)] = df2
+    if not dfs:
+        st.info("No DataFrame-like dataset found.")
+        return
+    if len(dfs) == 1:
+        _, df_one = next(iter(dfs.items()))
+        st.dataframe(df_one, use_container_width=True, hide_index=True)
+        return
+    selected = st.selectbox("Select dataset", options=list(dfs.keys()))
+    st.dataframe(dfs[selected], use_container_width=True, hide_index=True)
