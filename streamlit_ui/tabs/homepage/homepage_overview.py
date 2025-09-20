@@ -1,12 +1,14 @@
+
 import streamlit as st
-from tabs.homepage.champions import display_champions
-from tabs.homepage.season_standings import display_season_standings
-from tabs.homepage.head_to_head import display_head_to_head
-from tabs.homepage.schedules import display_schedules  # Import the schedules tab
-from tabs.homepage.weekly_recap import display_weekly_recap  # Import the weekly recap tab
+from .champions import display_champions
+from .season_standings import display_season_standings
+from .head_to_head import display_head_to_head
+from .schedules import display_schedules
+from .recap_overview import display_recap_overview  # Import recap overview
+
 
 def display_homepage_overview(df_dict):
-    sub_tab_names = ["Champions", "Season Standings", "Schedules", "Head-to-Head", "Weekly Recap"]
+    sub_tab_names = ["Champions", "Season Standings", "Schedules", "Head-to-Head", "Team Recaps"]
     sub_tabs = st.tabs(sub_tab_names)
 
     for i, sub_tab_name in enumerate(sub_tab_names):
@@ -19,5 +21,5 @@ def display_homepage_overview(df_dict):
                 display_schedules(df_dict)
             elif sub_tab_name == "Head-to-Head":
                 display_head_to_head(df_dict)
-            elif sub_tab_name == "Weekly Recap":
-                display_weekly_recap(df_dict)
+            elif sub_tab_name == "Team Recaps":
+                display_recap_overview(df_dict)
