@@ -1,10 +1,27 @@
-# streamlit_ui/tabs/homepage/team_recaps/weekly_recap.py
+
 from typing import Any, Dict, Optional
 import re
 
 import pandas as pd
 import streamlit as st
 
+# --- Units and adjectives we consider as number "units" to bold ---
+_UNIT_WORDS = (
+    "point", "points", "win", "wins", "seed", "seeds",
+    "chance", "favorite", "favorites", "spread", "margin",
+    "victory", "loss", "losses", "team", "teams",
+)
+_ADJ_WORDS = ("extra", "total", "more", "fewer", "additional")
+
+# number with optional %, then optional adjective, then a required unit
+_RE_NUM_UNIT = re.compile(
+    rf"(?<!\w)("
+    rf"(?:\d{{1,3}}(?:,\d{{3}})*|\d+)(?:\.\d+)?%?"           # number (opt decimal) (opt %)
+    rf"(?:\s+(?:{'|'.join(_ADJ_WORDS)}))?"                   # optional adjective
+    rf"(?:\s+(?:{'|'.join(_UNIT_WORDS)}))"                   # required unit
+    rf")(?!\w)",
+    re.IGNORECASE
+)
 
 def _as_dataframe(obj: Any) -> Optional[pd.DataFrame]:
     if isinstance(obj, pd.DataFrame):
@@ -247,6 +264,55 @@ def _combo_projection_message(
     return None
 
 
+def _escape_md_text(s: str) -> str:
+    # Escape Markdown special chars so content inside bold stays literal
+    return re.sub(r"([\\`*_~\-])", r"\\\1", str(s or ""))
+
+
+def _bold_parentheticals(s: str) -> str:
+    # Make any (...) segment bold, including the parentheses
+    def repl(m: re.Match) -> str:
+        inner = _escape_md_text(m.group(1))
+        return f"**{inner}**"
+    return re.sub(r"\(([^()]*)\)", repl, str(s or ""))
+
+
+def _bold_numbers_with_units(s: str) -> str:
+    # Bold number+unit phrases outside parentheses to avoid nested bold
+    def bold_nums_segment(seg: str) -> str:
+        def repl(m: re.Match) -> str:
+            return f"**{_escape_md_text(m.group(1))}**"
+        return _RE_NUM_UNIT.sub(repl, seg)
+
+    text = str(s or "")
+    out = []
+    depth = 0
+    buf = []
+    for ch in text:
+        if ch == "(":
+            if depth == 0 and buf:
+                out.append(bold_nums_segment("".join(buf)))
+                buf = []
+            depth += 1
+            out.append(ch)
+        elif ch == ")":
+            depth = max(0, depth - 1)
+            out.append(ch)
+        else:
+            if depth == 0:
+                buf.append(ch)
+            else:
+                out.append(ch)
+    if buf:
+        out.append(bold_nums_segment("".join(buf)))
+    return "".join(out)
+
+
+def _apply_bolding(s: str) -> str:
+    # Bold number+units outside parentheses, then bold entire parentheticals
+    return _bold_parentheticals(_bold_numbers_with_units(s))
+
+
 def display_weekly_recap(
     df_dict: Optional[Dict[Any, Any]] = None,
     *,
@@ -313,7 +379,10 @@ def display_weekly_recap(
     weekly_median = _val(row, col_weekly_median, None)
     teams_beat = _to_int(_val(row, col_teams_beat, None), None)
 
-    final_line = f"The final score of your matchup against {opponent} was {_fmt_points(team_pts)} - {_fmt_points(opp_pts)}."
+    final_line = (
+        f"The final score of your matchup against {opponent} was "
+        f"({_fmt_points(team_pts)} - {_fmt_points(opp_pts)})."
+    )
     is_p = (_flag(_val(row, col_is_playoffs, None)) == 1)
     did_win = (_flag(_val(row, col_win, None)) == 1)
     close = (_flag(_val(row, col_close_margin, None)) == 1)
@@ -335,11 +404,13 @@ def display_weekly_recap(
         scenario_msg = "You smoked 'em!"
     if scenario_msg:
         final_line += f" {scenario_msg}"
-    st.markdown(final_line)
+    st.markdown(_apply_bolding(final_line))
 
-    mean_line = f"The weekly mean was {_fmt_number(weekly_mean)} and the weekly median was {_fmt_number(weekly_median)}."
+    mean_line = (
+        f"The weekly mean was ({_fmt_number(weekly_mean)}) "
+        f"and the weekly median was ({_fmt_number(weekly_median)})."
+    )
 
-    # Use only above_league_median to show a luck tag for everyone
     luck_msg = None
     abl_flag = _flag(_val(row, col_above_league_median, None))
     if abl_flag is not None:
@@ -351,11 +422,10 @@ def display_weekly_recap(
             luck_msg = "Unlucky! You were better than most teams this week and still lost!"
         elif did_win and abl_flag == 1:
             luck_msg = "You deserved this win! You would have beaten over half the league this week!"
-
     if luck_msg:
         mean_line += f" {luck_msg}"
 
-    st.markdown(mean_line)
+    st.markdown(_apply_bolding(mean_line))
 
     proj_msg = _combo_projection_message(
         row=row,
@@ -371,4 +441,4 @@ def display_weekly_recap(
         col_abs_proj_score_err=col_abs_proj_score_err,
     )
     if proj_msg:
-        st.markdown(proj_msg)
+        st.markdown(_apply_bolding(proj_msg))

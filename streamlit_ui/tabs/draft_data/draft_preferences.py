@@ -51,7 +51,7 @@ def display_draft_preferences(draft_data, player_df):
             columns_to_show = ['Year', 'Team Manager', 'Cost', 'Primary Position', 'Is Keeper Status']
 
             filtered = draft_data[
-                (draft_data['Is Keeper Status'] != 1) &
+                draft_data['Is Keeper Status'].ne(1).fillna(True) &
                 (draft_data['Team Manager'].str.strip() != '')
             ].copy()
 
@@ -67,23 +67,26 @@ def display_draft_preferences(draft_data, player_df):
             def get_drafted_table(filtered_draft_data, table_title):
                 if selected_years:
                     filtered_draft_data = filtered_draft_data[filtered_draft_data['Year'].isin(selected_years)]
-                    player_df_filtered = player_df[player_df['playeryear'].str.contains('|'.join(selected_years))]
+                    player_df_filtered = player_df[player_df['season'].isin(selected_years)]
                 else:
                     player_df_filtered = player_df
 
                 if selected_manager and selected_manager != 'League Average':
                     filtered_draft_data = filtered_draft_data[filtered_draft_data['Team Manager'] == selected_manager]
 
+                right_cols = [c for c in ['playeryear', 'player', 'points', 'week', 'season', 'position']
+                              if c in player_df_filtered.columns]
+
                 merged_data = filtered_draft_data.merge(
-                    player_df_filtered[['playeryear', 'player', 'points', 'week', 'season', 'position']],
+                    player_df_filtered[right_cols],
                     left_on=['Name Full', 'Year'],
                     right_on=['player', 'season'],
                     how='left'
                 )
 
                 merged_data = merged_data[
-                    (merged_data['Year'].astype(int) < 2021) & (merged_data['week'] <= 16) |
-                    (merged_data['Year'].astype(int) >= 2021) & (merged_data['week'] <= 17)
+                    ((merged_data['Year'].astype(int) < 2021) & (merged_data['week'] <= 16)) |
+                    ((merged_data['Year'].astype(int) >= 2021) & (merged_data['week'] <= 17))
                 ]
 
                 aggregated_data = merged_data.groupby(['season', 'player', 'position']).agg({
@@ -156,23 +159,26 @@ def display_draft_preferences(draft_data, player_df):
             def get_kept_table(filtered_draft_data, table_title):
                 if selected_years:
                     filtered_draft_data = filtered_draft_data[filtered_draft_data['Year'].isin(selected_years)]
-                    player_df_filtered = player_df[player_df['playeryear'].str.contains('|'.join(selected_years))]
+                    player_df_filtered = player_df[player_df['season'].isin(selected_years)]
                 else:
                     player_df_filtered = player_df
 
                 if selected_manager and selected_manager != 'League Average':
                     filtered_draft_data = filtered_draft_data[filtered_draft_data['Team Manager'] == selected_manager]
 
+                right_cols = [c for c in ['playeryear', 'player', 'points', 'week', 'season', 'position']
+                              if c in player_df_filtered.columns]
+
                 merged_data = filtered_draft_data.merge(
-                    player_df_filtered[['playeryear', 'player', 'points', 'week', 'season', 'position']],
+                    player_df_filtered[right_cols],
                     left_on=['Name Full', 'Year'],
                     right_on=['player', 'season'],
                     how='left'
                 )
 
                 merged_data = merged_data[
-                    (merged_data['Year'].astype(int) < 2021) & (merged_data['week'] <= 16) |
-                    (merged_data['Year'].astype(int) >= 2021) & (merged_data['week'] <= 17)
+                    ((merged_data['Year'].astype(int) < 2021) & (merged_data['week'] <= 16)) |
+                    ((merged_data['Year'].astype(int) >= 2021) & (merged_data['week'] <= 17))
                 ]
 
                 player_data = merged_data.groupby(['player', 'position', 'Team Manager']).agg({
@@ -226,8 +232,8 @@ def display_draft_preferences(draft_data, player_df):
                 st.subheader(table_title)
                 st.dataframe(avg_data[columns_to_display], hide_index=True)
 
-            get_drafted_table(draft_data[draft_data['Is Keeper Status'] != 1], "Drafted Players")
-            get_kept_table(draft_data[draft_data['Is Keeper Status'] == 1], "Kept Players")
+            get_drafted_table(draft_data[draft_data['Is Keeper Status'].ne(1).fillna(True)], "Drafted Players")
+            get_kept_table(draft_data[draft_data['Is Keeper Status'].eq(1).fillna(False)], "Kept Players")
 
     with tabs[1]:
         st.subheader("Cost Over Time")

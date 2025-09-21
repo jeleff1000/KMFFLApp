@@ -1,5 +1,3 @@
-# python
-# file: 'streamlit_ui/tabs/homepage/team_recaps/season_recap.py'
 from typing import Any, Dict, Optional
 import re
 
@@ -104,6 +102,71 @@ def _fmt_percent(v) -> str:
     return f"{pct:.1f}%".replace(".0%", "%")
 
 
+# --- Bolding helpers (parentheticals and number+unit phrases) ---
+_UNIT_WORDS = (
+    "point", "points", "win", "wins", "seed", "seeds",
+    "chance", "favorite", "favorites", "spread", "margin",
+    "victory", "loss", "losses", "team", "teams",
+    "percent", "percentage", "game", "games",
+)
+_ADJ_WORDS = ("extra", "total", "more", "fewer", "additional")
+
+# number (with optional %, decimals, commas) + optional adjective + required unit
+_RE_NUM_UNIT = re.compile(
+    rf"(?<!\w)("
+    rf"(?:\d{{1,3}}(?:,\d{{3}})*|\d+)(?:\.\d+)?%?"
+    rf"(?:\s+(?:{'|'.join(_ADJ_WORDS)}))?"
+    rf"(?:\s+(?:{'|'.join(_UNIT_WORDS)}))"
+    rf")(?!\w)",
+    re.IGNORECASE
+)
+
+def _escape_md_text(s: str) -> str:
+    # Escape Markdown special chars so content inside bold stays literal
+    return re.sub(r"([\\`*_~\-])", r"\\\1", str(s or ""))
+
+def _bold_parentheticals(s: str) -> str:
+    # Make any (...) segment bold, including the parentheses
+    def repl(m: re.Match) -> str:
+        inner = _escape_md_text(m.group(1))
+        return f"**{inner}**"
+    return re.sub(r"\(([^()]*)\)", repl, str(s or ""))
+
+def _bold_numbers_with_units(s: str) -> str:
+    # Bold number+unit phrases outside parentheses (avoid nested bold)
+    def bold_nums_segment(seg: str) -> str:
+        def repl(m: re.Match) -> str:
+            return f"**{_escape_md_text(m.group(1))}**"
+        return _RE_NUM_UNIT.sub(repl, seg)
+
+    text = str(s or "")
+    out = []
+    depth = 0
+    buf = []
+    for ch in text:
+        if ch == "(":
+            if depth == 0 and buf:
+                out.append(bold_nums_segment("".join(buf)))
+                buf = []
+            depth += 1
+            out.append(ch)
+        elif ch == ")":
+            depth = max(0, depth - 1)
+            out.append(ch)
+        else:
+            if depth == 0:
+                buf.append(ch)
+            else:
+                out.append(ch)
+    if buf:
+        out.append(bold_nums_segment("".join(buf)))
+    return "".join(out)
+
+def _apply_bolding(s: str) -> str:
+    # Bold number+units outside parentheses, then bold entire parentheticals
+    return _bold_parentheticals(_bold_numbers_with_units(s))
+
+
 def display_season_recap(
     df_dict: Optional[Dict[Any, Any]] = None,
     *,
@@ -185,13 +248,14 @@ def display_season_recap(
         elif seed_to_date >= 7:
             seed_msg = "You are not in playoff position."
     line1 = (
-        f"So far your record is {wins_to_date if wins_to_date is not None else 'N/A'} - "
-        f"{losses_to_date if losses_to_date is not None else 'N/A'} and you would be the "
-        f"{seed_to_date if seed_to_date is not None else 'N/A'} seed in the playoffs if the season ended today."
+        f"So far your record is "
+        f"({wins_to_date if wins_to_date is not None else 'N/A'} - "
+        f"{losses_to_date if losses_to_date is not None else 'N/A'}) and you would be the "
+        f"({seed_to_date if seed_to_date is not None else 'N/A'} seed) in the playoffs if the season ended today."
     )
     if seed_msg:
         line1 += f" {seed_msg}"
-    st.markdown(line1)
+    st.markdown(_apply_bolding(line1))
 
     # --- Line 2: Projections + postseason chance message
     proj_msg = None
@@ -207,13 +271,13 @@ def display_season_recap(
         elif 0 <= p_pct <= 25:
             proj_msg = "Time to start planning for next year, bud."
     line2 = (
-        f"Based on current projections you are expected to finish the season with a projected final seed of "
-        f"{_fmt_number(avg_seed)}, a {_fmt_percent(p_playoffs)} chance of making the postseason, and "
-        f"{_fmt_percent(p_champ)} chance of winning the championship."
+        "Based on current projections you are expected to finish the season with a projected final seed of "
+        f"({_fmt_number(avg_seed)} seed), a ({_fmt_percent(p_playoffs)} chance) of making the postseason, and "
+        f"({_fmt_percent(p_champ)} chance) of winning the championship."
     )
     if proj_msg:
         line2 += f" {proj_msg}"
-    st.markdown(line2)
+    st.markdown(_apply_bolding(line2))
 
     # --- Line 3a: Shuffled wins sentence (single paragraph with tiered message)
     wins_vs_shuffle = _to_float(_val(row, col_wins_vs_shuffle, None), None)
@@ -224,8 +288,8 @@ def display_season_recap(
             wins_vs_shuffle = wt - sav
 
     line3a = (
-        f"Based on every possible schedule and opponent, you should have about {_fmt_number(shuffle_avg_wins)} "
-        f"wins so far this year."
+        "Based on every possible schedule and opponent, you should have about "
+        f"({_fmt_number(shuffle_avg_wins)} wins) so far this year."
     )
 
     # Append the extra-wins message into the same paragraph
@@ -235,8 +299,7 @@ def display_season_recap(
         if diff is not None:
             if diff > 1.0:
                 extra_msg = (
-                    f"You have been gifted {_fmt_number(diff)} extra wins so far this year because of an easy schedule, but who's counting? "
-
+                    f"You have been gifted ({_fmt_number(diff)} extra wins) so far this year because of an easy schedule, but who's counting?"
                 )
             elif 0.50 <= diff <= 1.0:
                 extra_msg = "Your schedule is giving you a little extra help."
@@ -246,14 +309,14 @@ def display_season_recap(
                 extra_msg = "You are getting a little unlucky with your schedule."
             elif diff < -1.0:
                 extra_msg = (
-                    f"You should have {_fmt_number(abs(diff))} more wins this year. "
-                    f"Your schedule has derailed your season. You can blame it all on the schedule."
+                    f"You should have ({_fmt_number(abs(diff))} more wins) this year. "
+                    "Your schedule has derailed your season. You can blame it all on the schedule."
                 )
 
     if extra_msg:
         line3a += f" {extra_msg}"
 
-    st.markdown(line3a)
+    st.markdown(_apply_bolding(line3a))
 
     # --- Line 3b: Shuffle playoff-position rate + message based on current seed
     shuffle_msg = None
@@ -269,8 +332,8 @@ def display_season_recap(
         elif sp_pct < 50 and seed_to_date <= 6:
             shuffle_msg = "But hey, you're living in the real world. Don't listen to the haters, they're just jealous."
     line3b = (
-        f"About {_fmt_percent(shuffle_avg_playoffs)} of possible schedules would currently have you in playoff position."
+        f"About ({_fmt_percent(shuffle_avg_playoffs)} of possible schedules) would currently have you in playoff position."
     )
     if shuffle_msg:
         line3b += f" {shuffle_msg}"
-    st.markdown(line3b)
+    st.markdown(_apply_bolding(line3b))
