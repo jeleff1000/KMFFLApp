@@ -1,4 +1,3 @@
-
 from typing import Any, Dict, Optional
 import re
 
@@ -193,72 +192,88 @@ def _combo_projection_message(
     proj_err_pos_str = _fmt_number(abs(proj_err)) if proj_err is not None else "N/A"
     abs_proj_err_str = _fmt_number(abs(abs_proj_err)) if abs_proj_err is not None else "N/A"
 
+    # --- helpers to bold content and units ---
+    def b(s: str) -> str:
+        return f"**{_escape_md_text(s)}**"
+
+    def pts(value_str: str, value_num: Optional[float]) -> str:
+        # add bold "point/points" with correct plurality
+        unit = "point" if (value_num is not None and abs(value_num) == 1) else "points"
+        return f"{b(value_str)} {b(unit)}"
+
+    chance_phrase = lambda pct: f"{b(pct)} {b('chance')}"
+    favorite_phrase = lambda pct: f"{b(pct)} {b('favorite')}"
+
+    margin_pts = pts(margin_pos_str, margin)
+    proj_err_pts = pts(proj_err_pos_str, proj_err)
+    abs_proj_err_pts = pts(abs_proj_err_str, abs_proj_err)
+
     w, a, pw, ats = win_flag, above_flag, projwin_flag, winats_flag
 
     if (w, a, pw, ats) == (0, 0, 0, 0):
         return (
             f"The haters said you couldn't do it and the haters were right! Shout out to the haters! "
-            f"We expected you to lose, but not like this. When you saw {opponent} was a {inv_odds_pct} favorite, "
-            f"you guys just decided to pack it in losing by {margin_pos_str} compared to the {spread_flip_str} point spread going into the week. "
+            f"We expected you to lose, but not like this. When you saw {opponent} was a {favorite_phrase(inv_odds_pct)}, "
+            f"you guys just decided to pack it in losing by {margin_pts} compared to the {pts(spread_flip_str, expected_spread)} spread going into the week. "
             f"Maybe a players-only meeting can sort out this debacle."
         )
     if (w, a, pw, ats) == (0, 0, 0, 1):
         return (
             f"{opponent} knew he could go easy on you this week and you proved him right. "
-            f"Sure your {margin_pos_str} point loss was closer than the {spread_flip_str} spread going into the week, but you still lost. "
-            f"You missed your personal projection by {abs_proj_err_str}. "
+            f"Sure your {pts(margin_pos_str, margin)} loss was closer than the {pts(spread_flip_str, expected_spread)} spread going into the week, but you still lost. "
+            f"You missed your personal projection by {abs_proj_err_pts}. "
             f"You lost but at least you kept it close? Not much good to take from this one. They are who you thought they were! And you let them off the hook!"
         )
     if (w, a, pw, ats) == (0, 0, 1, 0):
         return (
-            f"Now I know this one hurts. You had a {inv_odds_pct} chance of winning this matchup going into the week and then… well I don't need to tell you what happened. "
-            f"You lost by {margin_pos_str} when you were expected to win by {spread_str}. "
-            f"You even missed your personal projections by {abs_proj_err_str}. Scrap that entire gameplan because you won't make it far playing like this."
+            f"Now I know this one hurts. You had a {chance_phrase(inv_odds_pct)} of winning this matchup going into the week and then… well I don't need to tell you what happened. "
+            f"You lost by {margin_pts} when you were expected to win by {pts(spread_str, expected_spread)}. "
+            f"You even missed your personal projections by {abs_proj_err_pts}. Scrap that entire gameplan because you won't make it far playing like this."
         )
     if (w, a, pw, ats) == (0, 1, 0, 0):
         return (
             f"You gave it your best but {opponent}'s best was better. "
-            f"You exceeded your projected score by {proj_err_pos_str}. Goliath beat David this week but at least you gave it your all."
+            f"You exceeded your projected score by {proj_err_pts}. Goliath beat David this week but at least you gave it your all."
         )
     if (w, a, pw, ats) == (0, 1, 0, 1):
         return (
-            f"You came out fighting this week. The projections had you losing by {spread_flip_str} but you got this game pretty close. "
-            f"Only losing by {margin_pos_str}. You exceeded your projections by {proj_err_pos_str} just not enough to pull off the upset."
+            f"You came out fighting this week. The projections had you losing by {pts(spread_flip_str, expected_spread)} but you got this game pretty close. "
+            f"Only losing by {margin_pts}. You exceeded your projections by {proj_err_pts} just not enough to pull off the upset."
         )
     if (w, a, pw, ats) == (0, 1, 1, 0):
         return (
             f"{opponent} had something to prove this week! You deserved better. "
-            f"You beat your projection by {proj_err_pos_str} but still lost a game where you were favored. Just remember, defense wins championships."
+            f"You beat your projection by {proj_err_pts} but still lost a game where you were favored. Just remember, defense wins championships."
         )
     if (w, a, pw, ats) == (1, 0, 0, 1):
         return (
-            f"Sometimes your opponent decides to help you out. You were the underdog coming into the week with a {odds_pct} chance of winning and "
-            f"you didn't even play well! You fell short of your projected score by {abs_proj_err_str} points. Nevertheless, you still came away with the victory and that's all the really matters. Way to go!"
+            f"Sometimes your opponent decides to help you out. You were the underdog coming into the week with a {chance_phrase(odds_pct)} of winning and "
+            f"you didn't even play well! You fell short of your projected score by {abs_proj_err_pts}. Nevertheless, you still came away with the victory and that's all the really matters. Way to go!"
         )
     if (w, a, pw, ats) == (1, 0, 1, 0):
         return (
-            f"The great teams can win ugly. Sure you only won by {margin_pos_str} compared to the {spread_str} margin entering the week, "
+            f"The great teams can win ugly. Sure you only won by {margin_pts} compared to the {pts(spread_str, expected_spread)} margin entering the week, "
             f"but hey a win is a win!"
         )
     if (w, a, pw, ats) == (1, 0, 1, 1):
         return (
             f"Did you and {opponent} agree to take it easy on each other this week? "
-            f"You missed your projected score by {abs_proj_err_str} but still came away with the {margin_pos_str} point victory. Way to go!"
+            f"You missed your projected score by {abs_proj_err_pts} but still came away with the {pts(margin_pos_str, margin)} victory. Way to go!"
         )
     if (w, a, pw, ats) == (1, 1, 0, 1):
         return (
-            f"Everyone doubted you but you pulled through! You won despite the oddsmakers only giving you a {odds_pct} chance of winning at the beginning of the week. "
-            f"You exceeded your projected score by {proj_err_pos_str} and stepped up for a big win!"
+            f"Everyone doubted you but you pulled through! You won despite the oddsmakers only giving you a {chance_phrase(odds_pct)} at the beginning of the week. "
+            f"You exceeded your projected score by {proj_err_pts} and stepped up for a big win!"
         )
     if (w, a, pw, ats) == (1, 1, 1, 0):
         return (
             f"{opponent} gave you everything they got but it wasn't enough to stop your boys. "
-            f"Sure you only won by {margin_pos_str} but close only counts in horseshoes and grenades."
+            f"Sure you only won by {margin_pts} but close only counts in horseshoes and grenades."
         )
     if (w, a, pw, ats) == (1, 1, 1, 1):
         return (
-            f"You exceeded your lofty expectations! You had a {odds_pct} chance of winning and won by {margin_pos_str}, "
-            f"we had you pegged for a {spread_str} point favorite going into the week."
+            f"You exceeded your lofty expectations! You had a {chance_phrase(odds_pct)} of winning and won by {margin_pts}, "
+            f"we had you pegged for a {pts(spread_str, expected_spread)} favorite going into the week."
         )
 
     return None
@@ -406,22 +421,46 @@ def display_weekly_recap(
         final_line += f" {scenario_msg}"
     st.markdown(_apply_bolding(final_line))
 
-    mean_line = (
-        f"The weekly mean was ({_fmt_number(weekly_mean)}) "
-        f"and the weekly median was ({_fmt_number(weekly_median)})."
-    )
+    # Include "points" so both number and unit are bold via parenthetical rule
+    mean_line = f"The average score this week was ({_fmt_number(weekly_mean)} points)."
 
     luck_msg = None
     abl_flag = _flag(_val(row, col_above_league_median, None))
     if abl_flag is not None:
-        if did_win and abl_flag == 0:
-            luck_msg = "Lucky win! You were outscored by over half the league and still won!"
-        elif (not did_win) and abl_flag == 0:
-            luck_msg = "Can't blame the schedule on this loss. Most teams would have beat you this week."
-        elif (not did_win) and abl_flag == 1:
-            luck_msg = "Unlucky! You were better than most teams this week and still lost!"
-        elif did_win and abl_flag == 1:
-            luck_msg = "You deserved this win! You would have beaten over half the league this week!"
+        if teams_beat is not None:
+            tb_bold = f"**{teams_beat}**"
+            unit = "team" if teams_beat == 1 else "teams"
+
+            if teams_beat == 0:
+                zero_phrase = "You would not have beaten any teams this week"
+                if did_win and abl_flag == 0:
+                    luck_msg = f"Lucky win! {zero_phrase} and still won!"
+                elif (not did_win) and abl_flag == 0:
+                    luck_msg = f"Can't blame the schedule on this loss. {zero_phrase}."
+                elif (not did_win) and abl_flag == 1:
+                    luck_msg = f"Unlucky! {zero_phrase} and still lost!"
+                elif did_win and abl_flag == 1:
+                    luck_msg = f"You deserved this win! {zero_phrase}!"
+            else:
+                if did_win and abl_flag == 0:
+                    luck_msg = f"Lucky win! You would have only beaten {tb_bold} {unit} this week and still won!"
+                elif (not did_win) and abl_flag == 0:
+                    luck_msg = f"Can't blame the schedule on this loss. You would have only beaten {tb_bold} {unit} this week."
+                elif (not did_win) and abl_flag == 1:
+                    luck_msg = f"Unlucky! You would have beaten {tb_bold} {unit} this week and still lost!"
+                elif did_win and abl_flag == 1:
+                    luck_msg = f"You deserved this win! You would have beaten {tb_bold} {unit} this week!"
+        else:
+            # Fallback if teams_beat is unavailable
+            if did_win and abl_flag == 0:
+                luck_msg = "Lucky win! You were outscored by over half the league and still won!"
+            elif (not did_win) and abl_flag == 0:
+                luck_msg = "Can't blame the schedule on this loss. Most teams would have beat you this week."
+            elif (not did_win) and abl_flag == 1:
+                luck_msg = "Unlucky! You were better than most teams this week and still lost!"
+            elif did_win and abl_flag == 1:
+                luck_msg = "You deserved this win! You would have beaten over half the league this week!"
+
     if luck_msg:
         mean_line += f" {luck_msg}"
 
