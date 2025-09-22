@@ -1,4 +1,3 @@
-# python
 import streamlit as st
 from .weekly_scoring_graphs import display_weekly_scoring_graphs
 from .all_time_scoring_graphs import display_all_time_scoring_graphs
@@ -8,7 +7,7 @@ from .position_group_scoring import display_position_group_scoring_graphs
 from .player_scoring_graph import display_player_scoring_graphs
 from .playoff_odds_graph import PlayoffOddsViewer
 from .yearly_playoff_graph import PlayoffOddsCumulativeViewer  # New import
-
+from .power_rating import display_power_rating_graph  # <-- NEW
 
 def display_graphs_overview(df_dict):
     st.title("Graphs Overview")
@@ -22,9 +21,9 @@ def display_graphs_overview(df_dict):
     ]
     top_tabs = st.tabs(top_tab_names)
 
-    # Manager Graphs: Weekly, All-Time, Win/Loss
+    # Manager Graphs: Weekly, All-Time, Win/Loss, Power Rating
     with top_tabs[0]:
-        m_sub_names = ["Weekly Scoring", "All-Time Scoring", "Win Loss Graph"]
+        m_sub_names = ["Weekly Scoring", "All-Time Scoring", "Win Loss Graph", "Power Rating"]
         m_sub_tabs = st.tabs(m_sub_names)
         for i, name in enumerate(m_sub_names):
             with m_sub_tabs[i]:
@@ -35,6 +34,8 @@ def display_graphs_overview(df_dict):
                     display_all_time_scoring_graphs(df_dict, prefix=prefix)
                 elif name == "Win Loss Graph":
                     display_win_loss_graph(df_dict, prefix=prefix)
+                elif name == "Power Rating":
+                    display_power_rating_graph(df_dict, prefix=prefix)
 
     # Player Graphs: Position Group, Player
     with top_tabs[1]:
@@ -57,7 +58,6 @@ def display_graphs_overview(df_dict):
                 prefix = f"graphs_draft_{name.lower().replace(' ', '_')}_{i}"
                 draft_data = df_dict.get("Draft History")
                 if draft_data is not None:
-                    # This function expects `unique_prefix` instead of `prefix`
                     display_cost_over_time_graph(draft_data, unique_prefix=prefix)
                 else:
                     st.error("Draft data not found.")

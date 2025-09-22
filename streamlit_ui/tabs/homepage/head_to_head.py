@@ -176,24 +176,88 @@ def display_head_to_head(df_dict):
 
     key_prefix = "h2h_head_to_head_"
 
-    years = sorted(player_data['season'].dropna().unique())
+    # Normalize numeric fields
+    player_data = player_data.copy()
+    matchup_data = matchup_data.copy()
+    player_data['season'] = pd.to_numeric(player_data['season'], errors='coerce')
+    player_data['week'] = pd.to_numeric(player_data['week'], errors='coerce')
+    matchup_data['year'] = pd.to_numeric(matchup_data['year'], errors='coerce')
+    matchup_data['week'] = pd.to_numeric(matchup_data['week'], errors='coerce')
+
+    # Intersect available (season/year, week) combos that exist in BOTH datasets
+    pd_pairs = player_data[['season', 'week']].dropna().drop_duplicates()
+    md_pairs = matchup_data.rename(columns={'year': 'season'})[['season', 'week']].dropna().drop_duplicates()
+    avail_pairs = (
+        pd.merge(pd_pairs, md_pairs, on=['season', 'week'], how='inner')
+        .drop_duplicates()
+        .sort_values(['season', 'week'])
+    )
+
+    if avail_pairs.empty:
+        st.write("No overlapping year/week combinations in Player Data and Matchup Data.")
+        return
+
+    years = sorted(avail_pairs['season'].astype(int).unique())
     col1, col2, col3, col4 = st.columns([1, 1, 1, 0.5])
+
     with col1:
-        selected_year = st.selectbox("Select Year", years, key=f"{key_prefix}year_value")
+        selected_year = st.selectbox(
+            "Select Year",
+            years,
+            index=len(years) - 1,  # default to largest year with data in both
+            key=f"{key_prefix}year_value",
+        )
+
     with col2:
-        filtered_weeks = player_data[player_data['season'] == selected_year]['week'].dropna().unique()
-        selected_week = st.selectbox("Select Week", sorted(filtered_weeks),
-                                     key=f"{key_prefix}week_value") if selected_year else None
+        weeks = sorted(
+            avail_pairs.loc[avail_pairs['season'] == selected_year, 'week'].astype(int).unique()
+        )
+        if weeks:
+            selected_week = st.selectbox(
+                "Select Week",
+                weeks,
+                index=len(weeks) - 1,  # default to largest available week for selected year
+                key=f"{key_prefix}week_value",
+            )
+        else:
+            selected_week = None
+            st.selectbox(
+                "Select Week",
+                options=[],
+                key=f"{key_prefix}week_value",
+                disabled=True,
+                placeholder="No weeks",
+            )
+
     with col3:
-        filtered_matchups = player_data[
-            (player_data['season'] == selected_year) & (player_data['week'] == selected_week)
-            ]['matchup_name'].dropna().unique()
-        selected_matchup_name = st.selectbox("Select Matchup Name", sorted(filtered_matchups),
-                                             key=f"{key_prefix}matchup_name_value") if selected_year and selected_week else None
+        if selected_year and selected_week is not None:
+            matchups = player_data[
+                (player_data['season'] == selected_year) & (player_data['week'] == selected_week)
+            ]['matchup_name'].dropna().astype(str).unique()
+            matchups = sorted(matchups)
+            selected_matchup_name = (
+                st.selectbox(
+                    "Select Matchup Name",
+                    matchups,
+                    index=0 if matchups else None,
+                    key=f"{key_prefix}matchup_name_value",
+                )
+                if matchups else None
+            )
+        else:
+            selected_matchup_name = None
+            st.selectbox(
+                "Select Matchup Name",
+                options=[],
+                key=f"{key_prefix}matchup_name_value",
+                disabled=True,
+                placeholder="No matchups",
+            )
+
     with col4:
         go_button = st.button("Go", key=f"{key_prefix}go_button")
 
-    if go_button and selected_year and selected_week and selected_matchup_name:
+    if go_button and selected_year and (selected_week is not None) and selected_matchup_name:
         filtered_h2h = filter_h2h_data(player_data, selected_year, selected_week, selected_matchup_name)
         viewer = H2HViewer(filtered_h2h, matchup_data)
         viewer.display(prefix="h2h")

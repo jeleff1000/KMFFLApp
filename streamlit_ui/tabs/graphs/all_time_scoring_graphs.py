@@ -67,19 +67,60 @@ class AllTimeScoringStatsViewer:
 
             df_filtered = df_filtered.sort_values(['Manager', 'year', 'week'])
             df_filtered['team_points'] = df_filtered['team_points'].round(2)
-            # Calculate cumulative points for each manager across all years
+
+            # Cumulative points per manager
             df_filtered['Manager Cumulative Points'] = (
                 df_filtered.groupby('Manager')['team_points'].cumsum()
             )
 
-            x_axis = alt.Axis(title='Cumulative Week')
+            # Season boundary positions (first cumulative week per year)
+            year_boundaries = (
+                df_season_type.groupby('year')['Cumulative Week']
+                .min()
+                .reset_index()
+            )
 
-            chart = alt.Chart(df_filtered).mark_line().encode(
-                x=alt.X('Cumulative Week:O', axis=x_axis),
-                y=alt.Y('Manager Cumulative Points:Q', title='Cumulative Points'),
-                color='Manager:N'
+            # Base line chart: no weekly x-grid; keep horizontal y-grid; y auto-scales
+            base_line = alt.Chart(df_filtered).mark_line().encode(
+                x=alt.X(
+                    'Cumulative Week:O',
+                    axis=alt.Axis(title='Cumulative Week', grid=False)
+                ),
+                y=alt.Y(
+                    'Manager Cumulative Points:Q',
+                    title='Cumulative Points',
+                    axis=alt.Axis(grid=True),
+                    scale=alt.Scale(zero=False, nice=True)
+                ),
+                color='Manager:N',
+                tooltip=[
+                    alt.Tooltip('Manager:N'),
+                    alt.Tooltip('year:Q', title='Year'),
+                    alt.Tooltip('week:Q', title='Week'),
+                    alt.Tooltip('Cumulative Week:Q'),
+                    alt.Tooltip('Manager Cumulative Points:Q', format='.2f')
+                ]
             ).properties(width=800, height=400)
 
+            # Dashed vertical rules at season starts
+            year_rules = (
+                alt.Chart(year_boundaries)
+                .mark_rule(color='#bdbdbd', strokeDash=[4, 3], strokeWidth=1)
+                .encode(x=alt.X('Cumulative Week:O', title=None))
+            )
+
+            # Year labels at the top
+            year_labels = (
+                alt.Chart(year_boundaries)
+                .mark_text(fontSize=12, font='sans-serif', color='black', baseline='top', dy=6)
+                .encode(
+                    x=alt.X('Cumulative Week:O'),
+                    y=alt.value(0),
+                    text=alt.Text('year:N')
+                )
+            )
+
+            chart = alt.layer(year_rules, base_line, year_labels)
             st.altair_chart(chart, use_container_width=True)
 
 def display_all_time_scoring_graphs(df_dict, prefix=""):

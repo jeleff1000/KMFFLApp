@@ -72,28 +72,80 @@ class WinLossGraphViewer:
                 df_filtered = df_filtered[df_filtered['Final Playoff Seed'].isin(selected_seeds)]
 
             df_filtered = df_filtered.sort_values(['Manager', 'year', 'week'])
-            x_axis = alt.Axis(title='Cumulative Week')
 
+            # Season boundary positions
+            year_boundaries = (
+                df_season_type.groupby('year')['Cumulative Week']
+                .min()
+                .reset_index()
+            )
+
+            # Base line chart: no weekly x-grid; keep y-grid
             if show_total_wins:
-                df_filtered['Manager Cumulative Wins'] = (
-                    df_filtered.groupby('Manager')['win'].cumsum()
+                df_filtered['Manager Cumulative Wins'] = df_filtered.groupby('Manager')['win'].cumsum()
+                base_line = alt.Chart(df_filtered).mark_line().encode(
+                    x=alt.X(
+                        'Cumulative Week:O',
+                        axis=alt.Axis(title='Cumulative Week', grid=False)  # no weekly gridlines
+                    ),
+                    y=alt.Y(
+                        'Manager Cumulative Wins:Q',
+                        title='Cumulative Wins',
+                        axis=alt.Axis(grid=True),  # keep horizontal gridlines
+                        scale=alt.Scale(zero=False, nice=True)
+                    ),
+                    color='Manager:N',
+                    tooltip=[
+                        alt.Tooltip('Manager:N'),
+                        alt.Tooltip('year:Q', title='Year'),
+                        alt.Tooltip('week:Q', title='Week'),
+                        alt.Tooltip('Cumulative Week:Q'),
+                        alt.Tooltip('Manager Cumulative Wins:Q', format='.2f')
+                    ]
                 )
-                chart = alt.Chart(df_filtered).mark_line().encode(
-                    x=alt.X('Cumulative Week:O', axis=x_axis),
-                    y=alt.Y('Manager Cumulative Wins:Q', title='Cumulative Wins'),
-                    color='Manager:N'
-                ).properties(width=800, height=400)
             else:
                 df_filtered['win_loss_diff'] = df_filtered['win'].astype(int) - df_filtered['loss'].astype(int)
-                df_filtered['Manager Cumulative WinLoss'] = (
-                    df_filtered.groupby('Manager')['win_loss_diff'].cumsum()
+                df_filtered['Manager Cumulative WinLoss'] = df_filtered.groupby('Manager')['win_loss_diff'].cumsum()
+                base_line = alt.Chart(df_filtered).mark_line().encode(
+                    x=alt.X(
+                        'Cumulative Week:O',
+                        axis=alt.Axis(title='Cumulative Week', grid=False)
+                    ),
+                    y=alt.Y(
+                        'Manager Cumulative WinLoss:Q',
+                        title='Cumulative Win-Loss',
+                        axis=alt.Axis(grid=True),
+                        scale=alt.Scale(zero=False, nice=True)
+                    ),
+                    color='Manager:N',
+                    tooltip=[
+                        alt.Tooltip('Manager:N'),
+                        alt.Tooltip('year:Q', title='Year'),
+                        alt.Tooltip('week:Q', title='Week'),
+                        alt.Tooltip('Cumulative Week:Q'),
+                        alt.Tooltip('Manager Cumulative WinLoss:Q', format='.2f')
+                    ]
                 )
-                chart = alt.Chart(df_filtered).mark_line().encode(
-                    x=alt.X('Cumulative Week:O', axis=x_axis),
-                    y=alt.Y('Manager Cumulative WinLoss:Q', title='Cumulative Win-Loss'),
-                    color='Manager:N'
-                ).properties(width=800, height=400)
 
+            # Only season-mark lines (dashed rules), drawn under the lines
+            year_rules = (
+                alt.Chart(year_boundaries)
+                .mark_rule(color='#bdbdbd', strokeDash=[4, 3], strokeWidth=1)
+                .encode(x=alt.X('Cumulative Week:O', title=None))
+            )
+
+            # Year labels at the top
+            year_labels = (
+                alt.Chart(year_boundaries)
+                .mark_text(fontSize=12, font='sans-serif', color='black', baseline='top', dy=6)
+                .encode(
+                    x=alt.X('Cumulative Week:O'),
+                    y=alt.value(0),
+                    text=alt.Text('year:N')
+                )
+            )
+
+            chart = alt.layer(year_rules, base_line, year_labels).properties(width=800, height=400)
             st.altair_chart(chart, use_container_width=True)
         else:
             st.write(
