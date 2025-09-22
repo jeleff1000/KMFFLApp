@@ -271,7 +271,7 @@ def display_season_recap(
         elif 0 <= p_pct <= 25:
             proj_msg = "Time to start planning for next year, bud."
     line2 = (
-        "Based on current projections you are expected to finish the season with a projected final seed of "
+        "Based on current projections you are expected to finish the season with a projected final playoff position of "
         f"({_fmt_number(avg_seed)} seed), a ({_fmt_percent(p_playoffs)} chance) of making the postseason, and "
         f"({_fmt_percent(p_champ)} chance) of winning the championship."
     )
