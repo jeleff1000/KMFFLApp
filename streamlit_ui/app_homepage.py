@@ -1,4 +1,3 @@
-# python
 import os
 import sys
 import streamlit as st
@@ -105,9 +104,10 @@ def main():
     df_dict = load_parquet_dfs()
 
     if df_dict:
+        # Top-level tabs with 'Extras' tab
         tab_names = [
             "Home", "Managers", "Players", "Draft", "Transactions",
-            "Simulations", "Team Names", "Keeper", "Graphs"
+            "Simulations", "Extras"
         ]
         tabs = st.tabs(tab_names)
 
@@ -155,9 +155,6 @@ def main():
                 elif tab_name == "Draft":
                     display_draft_data_overview(df_dict)
 
-
-                # python
-
                 elif tab_name == "Transactions":
                     transaction_data = df_dict.get("All Transactions")
                     player_data = df_dict.get("Player Data")
@@ -168,7 +165,6 @@ def main():
                     else:
                         st.error("Transaction data not found.")
 
-
                 elif tab_name == "Simulations":
                     st.header("Simulations")
                     simulation_data = df_dict.get("Matchup Data")
@@ -178,20 +174,30 @@ def main():
                     else:
                         st.error("Simulation data not found.")
 
-                elif tab_name == "Keeper":
-                    st.header("Keeper")
-                    keeper_data = df_dict.get("Player Data")
-                    if keeper_data is not None:
-                        KeeperDataViewer(keeper_data).display()
-                    else:
-                        st.error("Keeper data not found.")
+                elif tab_name == "Extras":
+                    # Sub-tabs reordered: Graphs, Keeper, Team Names
+                    extras_tabs = st.tabs(["Graphs", "Keeper", "Team Names"])
 
-                elif tab_name == "Team Names":
-                    matchup_data = df_dict.get("Matchup Data")
-                    display_team_names(matchup_data)
+                    # Graphs
+                    with extras_tabs[0]:
+                        display_graphs_overview(df_dict)
 
-                elif tab_name == "Graphs":
-                    display_graphs_overview(df_dict)
+                    # Keeper
+                    with extras_tabs[1]:
+                        st.header("Keeper")
+                        keeper_data = df_dict.get("Player Data")
+                        if keeper_data is not None:
+                            KeeperDataViewer(keeper_data).display()
+                        else:
+                            st.error("Keeper data not found.")
+
+                    # Team Names
+                    with extras_tabs[2]:
+                        matchup_data = df_dict.get("Matchup Data")
+                        display_team_names(matchup_data)
+
+    else:
+        st.write("No data available")
 
 
 if __name__ == "__main__":
