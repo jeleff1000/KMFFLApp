@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from .career_optimal_lineups import display_career_optimal_lineup
 from .career_head_to_head_overview import CareerHeadToHeadViewer
+from .career_team_ratings import CareerTeamRatingsViewer
+
 
 class CareerMatchupOverviewViewer:
     def __init__(self, df, player_df):
@@ -52,11 +54,11 @@ class CareerMatchupOverviewViewer:
             with col6:
                 consolation = st.checkbox("Consolation", key=f"{prefix}_consolation_checkbox")
 
-            # Filter the DataFrame based on selected managers, opponents, years, and game types
+            # Filter the DataFrame
             filtered_df = self.filter_data(self.df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
 
-            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats", "Head-to-Head"]
-            tabs = st.tabs(tab_names)
+            tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats", "Team Ratings", "Head-to-Head"]
+            tabs = st.tabs([t for t in tab_names])
 
             for i, tab_name in enumerate(tab_names):
                 with tabs[i]:
@@ -74,6 +76,9 @@ class CareerMatchupOverviewViewer:
                         viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Optimal Stats":
                         display_career_optimal_lineup(self.player_df, filtered_df)
+                    elif tab_name == "Team Ratings":
+                        viewer = CareerTeamRatingsViewer(filtered_df)
+                        viewer.display(prefix=f"{prefix}_{tab_name.lower().replace(' ', '_')}")
                     elif tab_name == "Head-to-Head":
                         head_to_head_viewer = CareerHeadToHeadViewer(filtered_df)
                         head_to_head_viewer.display()
