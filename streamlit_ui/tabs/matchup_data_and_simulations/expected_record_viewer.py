@@ -66,47 +66,68 @@ def _render_expected_seed(base_df, year, week):
     if week_df.empty:
         st.info("No rows for selected year/week.")
         return
-    seed_cols = [c for c in week_df.columns if c.startswith("shuffle_") and c.endswith("_seed")]
+
+    # Collect only shuffle seed columns that follow pattern shuffle_<weekNumber>_seed
+    raw_seed_cols = [c for c in week_df.columns if c.startswith("shuffle_") and c.endswith("_seed")]
+    seed_cols = []
+    week_number_map = {}
+    for c in raw_seed_cols:
+        parts = c.split('_')
+        # Expect at least ['shuffle', '<num>', 'seed']
+        if len(parts) >= 3:
+            num_token = parts[1]
+            if num_token.isdigit():
+                week_number_map[c] = int(num_token)
+                seed_cols.append(c)
+
     if not seed_cols:
-        st.info("No shuffle seed cols.")
+        st.info("No valid shuffle seed cols.")
         return
-    seed_cols = sorted(seed_cols, key=lambda c: int(c.split('_')[1]))
+
+    # Sort using parsed week numbers
+    seed_cols = sorted(seed_cols, key=lambda c: week_number_map[c])
+
     cols = ['Manager'] + seed_cols
     cols = [c for c in cols if c in week_df.columns]
     df = (week_df[cols]
           .drop_duplicates(subset=['Manager'])
           .set_index('Manager')
           .sort_index())
-    # Add Actual Seed from Playoff Seed to Date if present
+
     if 'Playoff Seed to Date' in week_df.columns:
         actual_seed = (week_df[['Manager', 'Playoff Seed to Date']]
                        .drop_duplicates(subset=['Manager'])
                        .set_index('Manager')['Playoff Seed to Date']
                        .rename('Actual Seed'))
         df = df.join(actual_seed)
-    # Convert shuffle seed probabilities to numeric
+
     df[seed_cols] = df[seed_cols].apply(pd.to_numeric, errors='coerce')
-    bye_source = [c for c in seed_cols if int(c.split('_')[1]) in (1, 2)]
-    playoff_source = [c for c in seed_cols if int(c.split('_')[1]) <= 6]
+
+    bye_source = [c for c in seed_cols if week_number_map[c] in (1, 2)]
+    playoff_source = [c for c in seed_cols if week_number_map[c] <= 6]
+
     df['Bye%'] = df[bye_source].sum(axis=1).round(2) if bye_source else 0.0
     df['Playoff%'] = df[playoff_source].sum(axis=1).round(2) if playoff_source else 0.0
-    # Rename shuffle_x_seed -> x
-    rename_map = {c: str(int(c.split('_')[1])) for c in seed_cols}
+
+    # Rename to just the week number
+    rename_map = {c: str(week_number_map[c]) for c in seed_cols}
     df = df.rename(columns=rename_map)
-    iteration_cols = sorted([c for c in df.columns if c.isdigit()], key=lambda x: int(x))
-    # Order columns (simulation iterations, Bye/Playoff %, Actual Seed last if present)
+
+    iteration_cols = sorted([v for v in rename_map.values()], key=lambda x: int(x))
     ordered = iteration_cols + ['Bye%', 'Playoff%']
     if 'Actual Seed' in df.columns:
         ordered.append('Actual Seed')
         df['Actual Seed'] = pd.to_numeric(df['Actual Seed'], errors='coerce')
+
     df = df[ordered]
-    # Rounding
+
     numeric_percent_cols = iteration_cols + ['Bye%', 'Playoff%']
     df[numeric_percent_cols] = df[numeric_percent_cols].round(2)
-    # Styling: percent format for probability cols, raw int/float for Actual Seed
+
     fmt = {c: '{:.2f}%' for c in numeric_percent_cols}
     if 'Actual Seed' in df.columns:
         fmt['Actual Seed'] = '{:.0f}'
+
     styled = (df.style
               .background_gradient(cmap='RdYlGn', subset=iteration_cols, axis=0)
               .format(fmt))

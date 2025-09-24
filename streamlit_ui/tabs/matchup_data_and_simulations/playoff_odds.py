@@ -1,5 +1,4 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
 
 class PlayoffOddsViewer:
@@ -8,7 +7,7 @@ class PlayoffOddsViewer:
 
     def display(self):
         st.subheader("Playoff Odds Monte Carlo Simulation")
-        df = self.df[(self.df["is_consolation"] == 0)].copy()
+        df = self.df[self.df["is_consolation"] == 0].copy()
         seasons = sorted(df["year"].unique())
         max_season = max(seasons)
 
@@ -34,17 +33,6 @@ class PlayoffOddsViewer:
         ]
         odds_table = odds[odds_cols].sort_values("avg_seed", ascending=True).reset_index(drop=True)
 
-        n_teams = reg_season_raw["Manager"].nunique()
-        seed_cols = [f"x{i}_seed" for i in range(1, n_teams + 1)]
-        # Set Manager as index, sort, and set index name
-        seed_dist = odds[["Manager"] + seed_cols].set_index("Manager").sort_index()
-        seed_dist.index.name = None  # Remove the index label
-
         if go_clicked:
             st.subheader("Simulation Odds")
             st.dataframe(odds_table, hide_index=True)
-            st.subheader("Seed Distribution")
-            styled = seed_dist.style.background_gradient(
-                subset=seed_cols, cmap="RdYlGn"
-            ).format("{:.2f}", subset=seed_cols)
-            st.markdown(styled.to_html(escape=False, index=True), unsafe_allow_html=True)
