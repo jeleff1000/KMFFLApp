@@ -69,7 +69,7 @@ def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
     styled = (df.style
               .background_gradient(cmap='PuBuGn', axis=1)
               .format(precision=2, na_rep=""))
-    st.subheader("Predicted Expected Record (Full Season Distribution)")
+    st.subheader("Predicted Expected Record")
     st.caption(f"Season length detected: {season_len} games")
     st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>",
                 unsafe_allow_html=True)
