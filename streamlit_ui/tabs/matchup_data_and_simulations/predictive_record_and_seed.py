@@ -69,7 +69,7 @@ def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
     styled = (df.style
               .background_gradient(cmap='PuBuGn', axis=1)
               .format(precision=2, na_rep=""))
-    st.subheader("Predicted Expected Record")
+    st.subheader("Predicted Record")
     st.caption(f"Season length detected: {season_len} games")
     st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>",
                 unsafe_allow_html=True)
@@ -139,7 +139,7 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
     styled = (df.style
               .background_gradient(cmap='PuBuGn', subset=iteration_cols, axis=0)
               .format(fmt))
-    st.subheader("Predicted Expected Seed")
+    st.subheader("Predicted Seed")
     st.markdown("<style>.dataframe tbody tr td { font-size:8px; }</style>",
                 unsafe_allow_html=True)
     st.dataframe(styled, use_container_width=True)

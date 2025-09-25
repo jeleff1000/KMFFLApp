@@ -1,16 +1,15 @@
-# streamlit_ui/tabs/homepage/recap_overview.py
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Tuple
 from datetime import datetime
 import re
 
 import pandas as pd
 import streamlit as st
 
-# Import the two recap text generators (no UI inside these)
 from .team_recaps import weekly_recap, season_recap
+from . import player_weekly_recap
 
 
-# ----- Local helpers for selection UI (kept here to avoid cross‑module "private" imports) -----
+# ----- Local helpers for selection UI -----
 def _as_dataframe(obj: Any) -> Optional[pd.DataFrame]:
     if isinstance(obj, pd.DataFrame):
         return obj
@@ -84,7 +83,86 @@ def _manager_options(df: Optional[pd.DataFrame]) -> List[str]:
     return sorted(set(ser.tolist()), key=lambda x: x.lower())
 
 
-# ----- Main Overview (owns all selection UI) -----
+# ----- New helpers for Player Data two-week (current + prior cumulative) slice -----
+def _get_player_df(df_dict: Optional[Dict[Any, Any]]) -> Optional[pd.DataFrame]:
+    if not isinstance(df_dict, dict):
+        return None
+    if "Player Data" in df_dict:
+        return _as_dataframe(df_dict["Player Data"])
+    for k, v in (df_dict or {}).items():
+        if str(k).strip().lower() == "player data":
+            return _as_dataframe(v)
+    return None
+
+
+def _detect_year_col(df: pd.DataFrame) -> Optional[str]:
+    for c in ["season_year", "year", "Year", "season", "Season"]:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _detect_week_col(df: pd.DataFrame) -> Optional[str]:
+    for c in ["week", "Week"]:
+        if c in df.columns:
+            return c
+    return None
+
+
+def _detect_cum_week_col(df: pd.DataFrame) -> Optional[str]:
+    for c in ["cumulative_week", "cumulativeweek", "cumul_week", "cumulweek"]:
+        if c in df.columns:
+            return c
+    # fallback
+    return _detect_week_col(df)
+
+
+def _build_player_two_week_slice(player_df: pd.DataFrame,
+                                 year: int,
+                                 week: int) -> Tuple[pd.DataFrame, Optional[float], Optional[float]]:
+    """
+    Returns (slice_df, prev_cum_value, current_cum_value).
+    Finds the cumulative value(s) for the selected year/week, then prior global cumulative.
+    """
+    if player_df is None or player_df.empty:
+        return player_df.iloc[0:0], None, None
+
+    cum_col = _detect_cum_week_col(player_df)
+    week_col = _detect_week_col(player_df)
+    year_col = _detect_year_col(player_df)
+    if not cum_col or not week_col:
+        return player_df.iloc[0:0], None, None
+
+    df = player_df.copy()
+    df["_cum_"] = pd.to_numeric(df[cum_col], errors="coerce")
+    df["_wk_"] = pd.to_numeric(df[week_col], errors="coerce")
+    if year_col:
+        df["_yr_"] = pd.to_numeric(df[year_col], errors="coerce")
+
+    if year_col:
+        cur_mask = (df["_yr_"] == year) & (df["_wk_"] == week)
+    else:
+        cur_mask = (df["_wk_"] == week)
+    cur_rows = df[cur_mask]
+    if cur_rows.empty:
+        return df.iloc[0:0], None, None
+
+    cur_cums = cur_rows["_cum_"].dropna().unique()
+    if len(cur_cums) == 0:
+        return df.iloc[0:0], None, None
+    cur_cum = float(max(cur_cums))
+
+    prev_rows = df[df["_cum_"] < cur_cum]
+    if prev_rows.empty:
+        slice_df = df[df["_cum_"] == cur_cum]
+        return slice_df.drop(columns=["_cum_", "_wk_"] + (["_yr_"] if year_col else []), errors="ignore"), None, cur_cum
+
+    prev_cum = float(prev_rows["_cum_"].max())
+    slice_df = df[df["_cum_"].isin([prev_cum, cur_cum])]
+    return slice_df.drop(columns=["_cum_", "_wk_"] + (["_yr_"] if year_col else []), errors="ignore"), prev_cum, cur_cum
+
+
+# ----- Main Overview UI -----
 def display_recap_overview(df_dict: Optional[Dict[Any, Any]] = None) -> None:
     matchup_df = _get_matchup_df(df_dict)
 
@@ -130,7 +208,6 @@ def display_recap_overview(df_dict: Optional[Dict[Any, Any]] = None) -> None:
         return
     selected_manager = st.selectbox("Select Manager", options=managers, index=0)
 
-    # Persist selection for downstream modules if needed
     st.session_state["recap_overview_selection"] = {
         "year": selected_year,
         "week": selected_week,
@@ -154,3 +231,33 @@ def display_recap_overview(df_dict: Optional[Dict[Any, Any]] = None) -> None:
         week=selected_week,
         manager=selected_manager,
     )
+
+    # Build two-week Player Data slice (all owners) for Most Improved / awards
+    player_df = _get_player_df(df_dict)
+    if player_df is not None:
+        two_week_df, prev_cum, cur_cum = _build_player_two_week_slice(player_df, selected_year, selected_week)
+        if two_week_df is not None and not two_week_df.empty:
+            # Provide contextual info if needed later
+            st.session_state["player_prev_cum_week"] = prev_cum
+            st.session_state["player_cur_cum_week"] = cur_cum
+            df_dict_player = dict(df_dict or {})
+            df_dict_player["Player Data"] = two_week_df
+        else:
+            df_dict_player = df_dict
+    else:
+        df_dict_player = df_dict
+
+    st.divider()
+    st.header("Player Weekly Recap")
+    if hasattr(player_weekly_recap, "display_player_weekly_recap"):
+        try:
+            player_weekly_recap.display_player_weekly_recap(
+                df_dict=df_dict_player,
+                year=selected_year,
+                week=selected_week,
+                manager=selected_manager,
+            )
+        except Exception as e:
+            st.warning(f"Player weekly recap failed: {e}")
+    else:
+        st.warning("`display_player_weekly_recap` not found in module.")
