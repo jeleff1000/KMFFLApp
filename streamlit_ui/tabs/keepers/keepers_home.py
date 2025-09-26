@@ -35,11 +35,15 @@ class KeeperDataViewer:
                 df = df[df['season'].isin(selected_years)]
 
             columns_to_display = [
-                'player', 'kept_next_year', 'kept_this_year', 'keeper_price', 'team', 'owner', 'position', 'season',
+                'player', 'kept_next_year', 'Is Keeper Status', 'keeper_price', 'team', 'owner', 'position', 'season',
                 'avg_points_this_year', 'avg_points_next_year', 'avg_$_next_year',
                 'cost', 'faab_bid', 'total_points_next_year'
             ]
             df = df[columns_to_display]
             df = df.dropna(how='all', subset=columns_to_display)
+
+            # Convert columns to boolean
+            df['kept_next_year'] = df['kept_next_year'].astype(bool)
+            df['Is Keeper Status'] = df['Is Keeper Status'].astype(bool)
 
             st.dataframe(df, height=600, width=1200, hide_index=True)
