@@ -16,80 +16,81 @@ class SeasonMatchupStatsViewer:
 
             # Compute Sacko flag before aggregation
             sacko_flags = []
-            if 'Sacko' in self.df.columns:
-                for (manager, year), group in self.df.groupby(['Manager', 'year']):
-                    sacko_flag = group['Sacko'].eq(1).any()
-                    sacko_flags.append({'Manager': manager, 'year': year, 'Sacko': sacko_flag})
+            if 'sacko' in self.df.columns:
+                for (manager, year), group in self.df.groupby(['manager', 'year']):
+                    sacko_flag = group['sacko'].eq(1).any()
+                    sacko_flags.append({'manager': manager, 'year': year, 'sacko': sacko_flag})
             else:
-                for (manager, year), group in self.df.groupby(['Manager', 'year']):
-                    sacko_flags.append({'Manager': manager, 'year': year, 'Sacko': False})
+                for (manager, year), group in self.df.groupby(['manager', 'year']):
+                    sacko_flags.append({'manager': manager, 'year': year, 'sacko': False})
             sacko_df = pd.DataFrame(sacko_flags)
 
-            aggregated_df = self.df.groupby(['Manager', 'year']).agg({
-                'team_points': aggregation_func,
-                'opponent_score': aggregation_func,
-                'win': aggregation_func,
-                'loss': aggregation_func,
-                'quarterfinal': aggregation_func,
-                'semifinal': aggregation_func,
-                'championship': aggregation_func,
-                'Champion': aggregation_func,
-                'is_playoffs': aggregation_func,
-                'margin': aggregation_func,
-                'total_matchup_score': aggregation_func,
-                'teams_beat_this_week': aggregation_func,
-                'opponent_teams_beat_this_week': aggregation_func,
-                'close_margin': aggregation_func,
-                'above_league_median': aggregation_func,
-                'below_league_median': aggregation_func,
-                'Above Opponent Median': aggregation_func,
-                'Below Opponent Median': aggregation_func,
-                'GPA': aggregation_func,
-                'Real Score': aggregation_func,
-                'Real Opponent Score': aggregation_func,
-                'Real Margin': aggregation_func,
-                'Real Total Matchup Score': aggregation_func
-            }).reset_index()
+            # Only aggregate columns that exist in the DataFrame
+            agg_columns = [
+                'team_points', 'opponent_score', 'win', 'loss', 'quarterfinal', 'semifinal', 'championship',
+                'champion', 'is_playoffs', 'margin', 'total_matchup_score', 'teams_beat_this_week',
+                'opponent_teams_beat_this_week', 'close_margin', 'above_league_median', 'below_league_median',
+                'above_opponent_median', 'below_opponent_median', 'gpa', 'real_score', 'real_opponent_score',
+                'real_margin', 'real_total_matchup_score'
+            ]
+            agg_dict = {col: aggregation_func for col in agg_columns if col in self.df.columns}
+
+            aggregated_df = self.df.groupby(['manager', 'year']).agg(agg_dict).reset_index()
 
             # Merge Sacko column
-            aggregated_df = pd.merge(aggregated_df, sacko_df, on=['Manager', 'year'], how='left')
+            aggregated_df = pd.merge(aggregated_df, sacko_df, on=['manager', 'year'], how='left')
 
+            # Rounding
             if aggregation_type:
-                columns_to_round_2 = [
+                columns_to_round_2 = [c for c in [
                     'team_points', 'opponent_score', 'margin', 'total_matchup_score', 'teams_beat_this_week',
-                    'opponent_teams_beat_this_week', 'GPA', 'Real Score', 'Real Opponent Score', 'Real Margin',
-                    'Real Total Matchup Score'
-                ]
-                columns_to_round_3 = [
-                    'close_margin', 'above_league_median', 'below_league_median', 'Above Opponent Median',
-                    'Below Opponent Median'
-                ]
+                    'opponent_teams_beat_this_week', 'gpa', 'real_score', 'real_opponent_score', 'real_margin',
+                    'real_total_matchup_score'
+                ] if c in aggregated_df.columns]
+                columns_to_round_3 = [c for c in [
+                    'close_margin', 'above_league_median', 'below_league_median', 'above_opponent_median',
+                    'below_opponent_median'
+                ] if c in aggregated_df.columns]
                 aggregated_df[columns_to_round_2] = aggregated_df[columns_to_round_2].round(2)
                 aggregated_df[columns_to_round_3] = aggregated_df[columns_to_round_3].round(3)
-                aggregated_df['win'] = aggregated_df['win'].round(3)
-                aggregated_df['loss'] = aggregated_df['loss'].round(3)
+                if 'win' in aggregated_df.columns:
+                    aggregated_df['win'] = aggregated_df['win'].round(3)
+                if 'loss' in aggregated_df.columns:
+                    aggregated_df['loss'] = aggregated_df['loss'].round(3)
 
             aggregated_df['year'] = aggregated_df['year'].astype(str)
 
-            aggregated_df['quarterfinal_check'] = aggregated_df['quarterfinal'] > 0
-            aggregated_df['semifinal_check'] = aggregated_df['semifinal'] > 0
-            aggregated_df['championship_check'] = aggregated_df['championship'] > 0
-            aggregated_df['Champion_check'] = aggregated_df['Champion'] > 0
-            aggregated_df['Team_Made_Playoffs'] = aggregated_df['is_playoffs'] > 0
+            # Playoff/Champ flags
+            if 'quarterfinal' in aggregated_df.columns:
+                aggregated_df['quarterfinal_check'] = aggregated_df['quarterfinal'] > 0
+            if 'semifinal' in aggregated_df.columns:
+                aggregated_df['semifinal_check'] = aggregated_df['semifinal'] > 0
+            if 'championship' in aggregated_df.columns:
+                aggregated_df['championship_check'] = aggregated_df['championship'] > 0
+            if 'champion' in aggregated_df.columns:
+                aggregated_df['champion_check'] = aggregated_df['champion'] > 0
+            if 'is_playoffs' in aggregated_df.columns:
+                aggregated_df['team_made_playoffs'] = aggregated_df['is_playoffs'] > 0
 
-            display_df = aggregated_df[['Manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Team_Made_Playoffs', 'quarterfinal_check', 'semifinal_check', 'championship_check', 'Champion_check', 'Sacko']]
+            # Display columns (only those that exist)
+            display_cols = [
+                'manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'team_made_playoffs',
+                'quarterfinal_check', 'semifinal_check', 'championship_check', 'champion_check', 'sacko'
+            ]
+            display_df = aggregated_df[[c for c in display_cols if c in aggregated_df.columns]]
             display_df = display_df.rename(columns={
                 'year': 'Year',
                 'win': 'W',
                 'loss': 'L',
                 'team_points': 'PF',
                 'opponent_score': 'PA',
-                'Team_Made_Playoffs': 'Playoffs',
+                'team_made_playoffs': 'Playoffs',
                 'quarterfinal_check': 'Quarterfinals',
                 'semifinal_check': 'Semifinals',
                 'championship_check': 'Championship',
-                'Champion_check': 'Champ'
+                'champion_check': 'Champ',
+                'sacko': 'Sacko'
             })
             st.dataframe(display_df, hide_index=True)
         else:
-            st.write("The required column 'win' is not available in the data.")
+            st.write("The required column `win` is not available in the data.")

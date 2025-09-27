@@ -5,51 +5,54 @@ import numpy as np
 def display_career_draft(draft_data):
     st.header("Career Draft Stats")
 
-    # Convert 'Team Manager' and 'Year' columns to strings to avoid comparison issues
-    draft_data['Team Manager'] = draft_data['Team Manager'].astype(str)
-    draft_data['Year'] = draft_data['Year'].astype(str)
+    # Standardize column names to snake_case
+    draft_data = draft_data.rename(columns={
+        'Team Manager': 'manager',
+        'Year': 'year',
+        'Name Full': 'player_name',
+        'Primary Position': 'primary_position',
+        'Cost': 'cost',
+        'Is Keeper Status': 'is_keeper_status',
+        'Is Keeper Cost': 'is_keeper_cost',
+        'Pick': 'pick'
+    })
 
-    # Filter out rows where 'Team Manager' is "nan"
-    draft_data = draft_data[draft_data['Team Manager'] != "nan"]
+    draft_data['manager'] = draft_data['manager'].astype(str)
+    draft_data['year'] = draft_data['year'].astype(str)
+    draft_data = draft_data[draft_data['manager'] != "nan"]
+    draft_data['player_name'] = draft_data['player_name'].str.lower()
 
-    # Convert 'Name Full' to lowercase for case-insensitive aggregation
-    draft_data['Name Full'] = draft_data['Name Full'].str.lower()
-
-    # Dropdowns for Team Manager and Primary Position
     col1, col2 = st.columns(2)
     with col1:
-        team_managers = sorted(draft_data['Team Manager'].unique().tolist())
-        selected_team_managers = st.multiselect("Select Team Manager", options=team_managers, default=[], key='team_manager')
+        team_managers = sorted(draft_data['manager'].unique().tolist())
+        selected_team_managers = st.multiselect("Select Manager", options=team_managers, default=[], key='manager')
     with col2:
-        primary_positions = sorted(draft_data['Primary Position'].unique().tolist())
+        primary_positions = sorted(draft_data['primary_position'].unique().tolist())
         selected_primary_positions = st.multiselect("Select Primary Position", options=primary_positions, default=[], key='primary_position')
 
-    # Searchable dropdown for Name Full
-    names_full = sorted(draft_data['Name Full'].unique().tolist())
-    selected_names_full = st.multiselect("Search Name Full", options=names_full, default=[], key='name_full')
+    names_full = sorted(draft_data['player_name'].unique().tolist())
+    selected_names_full = st.multiselect("Search Player Name", options=names_full, default=[], key='player_name')
 
-    # Filter the draft data based on the selected team managers, primary positions, and names full
     if selected_team_managers:
-        draft_data = draft_data[draft_data['Team Manager'].isin(selected_team_managers)]
+        draft_data = draft_data[draft_data['manager'].isin(selected_team_managers)]
     if selected_primary_positions:
-        draft_data = draft_data[draft_data['Primary Position'].isin(selected_primary_positions)]
+        draft_data = draft_data[draft_data['primary_position'].isin(selected_primary_positions)]
     if selected_names_full:
-        draft_data = draft_data[draft_data['Name Full'].isin(selected_names_full)]
+        draft_data = draft_data[draft_data['player_name'].isin(selected_names_full)]
 
-    # Create a new column 'Times Drafted' to count unique years where 'Pick' is at least 1
-    draft_data['Times Drafted'] = draft_data.apply(lambda row: 1 if row['Pick'] >= 1 else 0, axis=1)
+    draft_data['times_drafted'] = draft_data.apply(lambda row: 1 if row.get('pick', 0) >= 1 else 0, axis=1)
 
-    # Aggregate data by 'Name Full' and 'Primary Position'
-    aggregated_data = draft_data.groupby(['Name Full', 'Primary Position']).agg({
-        'Cost': 'sum',
-        'Is Keeper Status': 'sum',
-        'Is Keeper Cost': 'sum',
-        'Times Drafted': 'sum'
+    aggregated_data = draft_data.groupby(['player_name', 'primary_position']).agg({
+        'cost': 'sum',
+        'is_keeper_status': 'sum',
+        'is_keeper_cost': 'sum',
+        'times_drafted': 'sum'
     }).reset_index()
 
-    # Capitalize each name in the display
-    aggregated_data['Name Full'] = aggregated_data['Name Full'].str.title()
+    aggregated_data['player_name'] = aggregated_data['player_name'].str.title()
 
-    # Select and display the specified columns
-    columns_to_display = ['Name Full', 'Primary Position', 'Cost', 'Is Keeper Status', 'Is Keeper Cost', 'Times Drafted']
-    st.dataframe(aggregated_data[columns_to_display], hide_index=True)
+    columns_to_display = [
+        'player_name', 'primary_position', 'cost', 'is_keeper_status', 'is_keeper_cost', 'times_drafted'
+    ]
+    columns_present = [col for col in columns_to_display if col in aggregated_data.columns]
+    st.dataframe(aggregated_data[columns_present], hide_index=True)

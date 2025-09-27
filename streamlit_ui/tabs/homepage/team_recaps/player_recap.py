@@ -294,7 +294,7 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
 
     if mode == "Start from Today's Date":
         if matchup_df is not None:
-            years = _unique_numeric(matchup_df, "year")
+            years = _unique_numeric(matchup_df, "manager_year")
             if years:
                 selected_year = max(years)
                 weeks = _weeks_for_year(matchup_df, selected_year)
@@ -306,14 +306,14 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
         st.caption(f"Selected Year: {selected_year} — Week: {selected_week}")
     else:
         if matchup_df is not None:
-            years = _unique_numeric(matchup_df, "year") or [datetime.now().year]
+            years = _unique_numeric(matchup_df, "manager_year") or [datetime.now().year]
         else:
             years = [datetime.now().year]
         col_year, col_week = st.columns(2)
         with col_year:
             selected_year = st.selectbox("Year", options=years, index=len(years) - 1)
         if matchup_df is not None:
-            weeks = _weeks_for_year(matchup_df, selected_year) or _unique_numeric(matchup_df, "week")
+            weeks = _weeks_for_year(matchup_df, selected_year) or _unique_numeric(matchup_df, "manager_week")
             if not weeks:
                 weeks = list(range(1, 19))
         else:
@@ -327,7 +327,6 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
     if not manager_options:
         st.info("No managers found in the dataset.")
         return
-    # REMOVED: "All Managers" option; user must pick a specific manager
     selected_manager = st.selectbox("Select Manager", options=manager_options, index=0)
 
     st.session_state["weekly_recap_selection"] = {
@@ -346,21 +345,21 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
     df = matchup_df.copy()
 
     # Column resolutions
-    col_year = _find_col(df, ["year"])
-    col_week = _find_col(df, ["week"])
+    col_year = _find_col(df, ["manager_year"])
+    col_week = _find_col(df, ["manager_week"])
     col_manager = _find_manager_column(df)
 
     col_opponent = _find_col(df, ["opponent", "opponent_team", "opp"])
     col_team_points = _find_col(df, ["team_points", "team score", "score", "points_for", "points for"])
     col_opponent_score = _find_col(df, ["opponent score", "opponent_score", "opp_points", "points_against", "points against", "opp score"])
 
-    col_weekly_mean = _find_col(df, ["weekly_mean", "week_mean", "league_week_mean"])
-    col_weekly_median = _find_col(df, ["weekly_median", "week_median", "league_week_median"])
+    col_weekly_mean = _find_col(df, ["league_weekly_mean"])
+    col_weekly_median = _find_col(df, ["league_weekly_median"])
     col_teams_beat = _find_col(df, ["teams_beat_this_week", "teams beat this week", "would_beat"])
 
-    col_wins_to_date = _find_col(df, ["Wins to Date", "wins_to_date", "wins to date"])
-    col_losses_to_date = _find_col(df, ["Losses to Date", "losses_to_date", "losses to date"])
-    col_seed_to_date = _find_col(df, ["Playoff Seed to Date", "playoff_seed_to_date", "seed to date"])
+    col_wins_to_date = _find_col(df, ["wins_to_date"])
+    col_losses_to_date = _find_col(df, ["losses_to_date"])
+    col_seed_to_date = _find_col(df, ["playoff_seed_to_date"])
 
     col_avg_seed = _find_col(df, ["avg_seed", "average_seed"])
     col_p_playoffs = _find_col(df, ["p_playoffs", "prob_playoffs", "p playoffs"])
@@ -374,15 +373,15 @@ def display_weekly_recap(df_dict: Optional[Dict[Any, Any]] = None) -> None:
     col_above_league_median = _find_col(df, ["above_league_median", "above league median", "above_median", "above median"])
 
     # New: projection-related columns
-    col_above_proj = _find_col(df, ["Above Projected Score", "above_projected_score", "above projected score", "above_proj", "above proj"])
-    col_projected_wins = _find_col(df, ["Projected Wins", "projected_wins", "is_favored", "favored", "favorite"])
-    col_win_ats = _find_col(df, ["Win Matchup Against the Spread", "win_matchup_against_the_spread", "win_ats", "covered", "cover", "beat_spread"])
+    col_above_proj = _find_col(df, ["above_proj_score"])
+    col_projected_wins = _find_col(df, ["projected_wins", "is_favored", "favored", "favorite"])
+    col_win_ats = _find_col(df, ["win_vs_spread", "win_matchup_against_the_spread", "win_ats", "covered", "cover", "beat_spread"])
 
-    col_expected_odds = _find_col(df, ["Expected Odds", "expected_odds", "win_probability", "proj_win_prob", "odds"])
-    col_expected_spread = _find_col(df, ["Expected Spread", "expected_spread", "proj_spread", "spread"])
+    col_expected_odds = _find_col(df, ["expected_odds", "win_probability", "proj_win_prob", "odds"])
+    col_expected_spread = _find_col(df, ["expected_spread", "proj_spread", "spread"])
     col_margin = _find_col(df, ["margin", "score_margin", "point_diff", "points_diff", "margin_of_victory"])
-    col_proj_score_err = _find_col(df, ["Projected Score Error", "projected_score_error", "proj_score_error", "projection_error"])
-    col_abs_proj_score_err = _find_col(df, ["Absolute Value Projected Score Error", "absolute value projected score error", "abs_projected_score_error", "abs proj score error"])
+    col_proj_score_err = _find_col(df, ["proj_score_error", "projected_score_error", "projection_error"])
+    col_abs_proj_score_err = _find_col(df, ["abs_proj_score_error", "absolute value projected score error", "abs_projected_score_error", "abs proj score error"])
 
     # Filtering by selection
     if col_year:

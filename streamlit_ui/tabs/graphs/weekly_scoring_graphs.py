@@ -9,10 +9,16 @@ class SeasonMatchupStatsViewer:
     def display_weekly_graphs(self, prefix=""):
         st.header("Team Points by Week")
         required_cols = {
-            'Manager', 'week', 'team_points', 'year', 'opponent',
-            'Final Playoff Seed', 'is_playoffs', 'is_consolation'
+            'manager', 'manager_week', 'team_points', 'year', 'opponent',
+            'final_playoff_seed', 'is_playoffs', 'is_consolation'
         }
         if self.df is not None and required_cols.issubset(self.df.columns) and not self.df.empty:
+            # Safely convert year to int, skipping invalid rows
+            self.df['year'] = pd.to_numeric(self.df['year'], errors='coerce')
+            self.df = self.df.dropna(subset=['year'])
+            if self.df.empty:
+                st.write("No valid data available for plotting after filtering year.")
+                return
             self.df['year'] = self.df['year'].astype(int)
             min_year = int(self.df['year'].min())
             max_year = int(self.df['year'].max())
@@ -25,15 +31,14 @@ class SeasonMatchupStatsViewer:
                 st.warning("Start Year must be less than or equal to End Year.")
                 return
 
-            # Multiselects in the same row, default to empty (acts as All)
             col1, col2 = st.columns(2)
             with col1:
-                managers = sorted(self.df['Manager'].unique().tolist())
+                managers = sorted(self.df['manager'].unique().tolist())
                 selected_managers = st.multiselect(
                     "Select Manager(s)", managers, default=[], key=f"{prefix}_manager_multiselect"
                 )
             with col2:
-                seeds = sorted(self.df['Final Playoff Seed'].dropna().unique().tolist())
+                seeds = sorted(self.df['final_playoff_seed'].dropna().unique().tolist())
                 selected_seeds = st.multiselect(
                     "Select Final Playoff Seed(s)", seeds, default=[], key=f"{prefix}_seed_multiselect"
                 )
@@ -56,89 +61,82 @@ class SeasonMatchupStatsViewer:
                 mask_all |= df_season_type['is_consolation'] == 1
             df_season_type = df_season_type[mask_all]
             df_season_type = df_season_type[(df_season_type['year'] >= start_year) & (df_season_type['year'] <= end_year)]
-            if 'Cumulative Week' not in df_season_type.columns:
-                df_season_type['Cumulative Week'] = df_season_type.groupby('year').cumcount() + 1
+            if 'cumulative_week' not in df_season_type.columns:
+                df_season_type['cumulative_week'] = df_season_type.groupby('year').cumcount() + 1
 
-            # Multiselect filter: empty means "All"
             df_filtered = df_season_type.copy()
             if selected_managers:
-                df_filtered = df_filtered[df_filtered['Manager'].isin(selected_managers)]
+                df_filtered = df_filtered[df_filtered['manager'].isin(selected_managers)]
             if selected_seeds:
-                df_filtered = df_filtered[df_filtered['Final Playoff Seed'].isin(selected_seeds)]
+                df_filtered = df_filtered[df_filtered['final_playoff_seed'].isin(selected_seeds)]
 
             x_axis_week = st.toggle("Show Season Week on X-axis", value=False)
-            x_field = 'week' if x_axis_week else 'Cumulative Week'
+            x_field = 'manager_week' if x_axis_week else 'cumulative_week'
 
-            # Sort and round
-            df_season_type = df_season_type.sort_values(['year', 'week'])
+            df_season_type = df_season_type.sort_values(['year', 'manager_week'])
             df_season_type['team_points'] = df_season_type['team_points'].round(2)
-            df_filtered = df_filtered.sort_values(['year', 'week'])
+            df_filtered = df_filtered.sort_values(['year', 'manager_week'])
             df_filtered['team_points'] = df_filtered['team_points'].round(2)
 
             if not x_axis_week:
                 x_axis = alt.Axis(title='Cumulative Week')
             else:
-                min_week = int(df_season_type['week'].min()) if not df_season_type.empty else 1
-                max_week = int(df_season_type['week'].max()) if not df_season_type.empty else 1
-                x_axis = alt.Axis(format='d', values=list(range(min_week, max_week + 1)), title='week')
+                min_week = int(df_season_type['manager_week'].min()) if not df_season_type.empty else 1
+                max_week = int(df_season_type['manager_week'].max()) if not df_season_type.empty else 1
+                x_axis = alt.Axis(format='d', values=list(range(min_week, max_week + 1)), title='Week')
 
             x_type = 'Q' if x_axis_week else 'O'
 
-            # Points (filtered)
             df_filtered = df_filtered.sort_values(x_field)
             points = alt.Chart(df_filtered).mark_point(size=60).encode(
                 x=alt.X(f'{x_field}:{x_type}', axis=x_axis),
                 y=alt.Y('team_points:Q', scale=alt.Scale(domain=[50, 220])),
-                color='Manager:N'
+                color=alt.Color('manager:N', title='Manager')
             )
 
             if x_axis_week:
-                # Black line: league average for season type only
-                week_avg_all = df_season_type.groupby('week')['team_points'].mean().reset_index()
+                week_avg_all = df_season_type.groupby('manager_week')['team_points'].mean().reset_index()
                 week_avg_all['team_points'] = week_avg_all['team_points'].round(2)
                 avg_line_all = alt.Chart(week_avg_all).mark_line(
                     strokeDash=[5, 5], size=5, color='black'
                 ).encode(
-                    x=alt.X('week:Q', axis=x_axis),
+                    x=alt.X('manager_week:Q', axis=x_axis),
                     y=alt.Y('team_points:Q', scale=alt.Scale(domain=[50, 220]))
                 )
-                # Solid lines: filtered average per manager, colored by manager
                 if selected_managers:
                     week_avg_filtered = (
-                        df_filtered.groupby(['Manager', 'week'])['team_points']
+                        df_filtered.groupby(['manager', 'manager_week'])['team_points']
                         .mean().reset_index()
                     )
                     week_avg_filtered['team_points'] = week_avg_filtered['team_points'].round(2)
                     avg_line_filtered = alt.Chart(week_avg_filtered).mark_line().encode(
-                        x=alt.X('week:Q', axis=x_axis),
+                        x=alt.X('manager_week:Q', axis=x_axis),
                         y=alt.Y('team_points:Q', scale=alt.Scale(domain=[50, 220])),
-                        color='Manager:N'
+                        color=alt.Color('manager:N', title='Manager')
                     )
                     chart = points + avg_line_all + avg_line_filtered
                 else:
                     chart = points + avg_line_all
             else:
-                # Black line: cumulative league average for season type only
-                df_season_type['League Cumulative Avg'] = (
+                df_season_type['league_cumulative_avg'] = (
                     df_season_type.groupby('year')['team_points']
                     .expanding().mean().reset_index(level=0, drop=True)
                 ).round(2)
-                league_avg_all = df_season_type.groupby(['year', 'Cumulative Week']).agg(
-                    {'League Cumulative Avg': 'last'}).reset_index()
+                league_avg_all = df_season_type.groupby(['year', 'cumulative_week']).agg(
+                    {'league_cumulative_avg': 'last'}).reset_index()
                 cumulative_line_all = alt.Chart(league_avg_all).mark_line(
                     strokeDash=[5, 5], size=5, color='black'
                 ).encode(
-                    x=alt.X('Cumulative Week:O', axis=x_axis),
-                    y=alt.Y('League Cumulative Avg:Q', scale=alt.Scale(domain=[50, 220])),
+                    x=alt.X('cumulative_week:O', axis=x_axis),
+                    y=alt.Y('league_cumulative_avg:Q', scale=alt.Scale(domain=[50, 220])),
                     detail='year:N'
                 )
 
-                # Add year boundary rules and labels
-                year_boundaries = df_season_type.groupby('year')['Cumulative Week'].min().reset_index()
+                year_boundaries = df_season_type.groupby('year')['cumulative_week'].min().reset_index()
                 year_rules = alt.Chart(year_boundaries).mark_rule(
                     color='gray', strokeDash=[2, 2]
                 ).encode(
-                    x=alt.X('Cumulative Week:O', axis=x_axis)
+                    x=alt.X('cumulative_week:O', axis=x_axis)
                 )
                 year_labels = alt.Chart(year_boundaries).mark_text(
                     dy=-225,
@@ -146,30 +144,29 @@ class SeasonMatchupStatsViewer:
                     font='sans-serif',
                     color='black'
                 ).encode(
-                    x=alt.X('Cumulative Week:O'),
+                    x=alt.X('cumulative_week:O'),
                     y=alt.value(220),
                     text='year:N'
                 )
 
-                # Red dashed lines: filtered cumulative average per Manager (fixed color for lines)
                 if selected_managers:
-                    df_filtered['Manager Cumulative Avg'] = (
-                        df_filtered.groupby(['Manager', 'year'])['team_points']
+                    df_filtered['manager_cumulative_avg'] = (
+                        df_filtered.groupby(['manager', 'year'])['team_points']
                         .expanding().mean().reset_index(level=[0, 1], drop=True)
                     ).round(2)
-                    manager_avg_filtered = df_filtered.groupby(['Manager', 'year', 'Cumulative Week']).agg(
-                        {'Manager Cumulative Avg': 'last'}).reset_index()
+                    manager_avg_filtered = df_filtered.groupby(['manager', 'year', 'cumulative_week']).agg(
+                        {'manager_cumulative_avg': 'last'}).reset_index()
                     cumulative_line_managers = alt.Chart(manager_avg_filtered).mark_line(
-                        size=3  # thick, solid line
+                        size=3
                     ).encode(
-                        x=alt.X('Cumulative Week:O', axis=x_axis),
-                        y=alt.Y('Manager Cumulative Avg:Q', scale=alt.Scale(domain=[50, 220])),
-                        color='Manager:N',
+                        x=alt.X('cumulative_week:O', axis=x_axis),
+                        y=alt.Y('manager_cumulative_avg:Q', scale=alt.Scale(domain=[50, 220])),
+                        color=alt.Color('manager:N', title='Manager'),
                         detail='year:N'
                     )
                     chart = (
-                            points + cumulative_line_all + cumulative_line_managers +
-                            year_rules + year_labels
+                        points + cumulative_line_all + cumulative_line_managers +
+                        year_rules + year_labels
                     )
                 else:
                     chart = (
@@ -180,14 +177,10 @@ class SeasonMatchupStatsViewer:
             st.altair_chart(chart, use_container_width=True)
         else:
             st.write(
-                "Required columns (`Manager`, `week`, `team_points`, `year`, `opponent`, `Final Playoff Seed`, `is_playoffs`, `is_consolation`) are missing or DataFrame is empty."
+                "Required columns (`manager`, `manager_week`, `team_points`, `year`, `opponent`, `final_playoff_seed`, `is_playoffs`, `is_consolation`) are missing or DataFrame is empty."
             )
 
 def display_weekly_scoring_graphs(df_dict, prefix=""):
-    """
-    Entry point for the Weekly Scoring tab.
-    The `prefix` must be unique per tab instance to avoid Streamlit key collisions.
-    """
     df = df_dict.get("Matchup Data")
     if df is not None:
         viewer = SeasonMatchupStatsViewer(df)

@@ -8,20 +8,20 @@ def display_position_group_scoring_graphs(df_dict, prefix=""):
         st.error("Player Data not found.")
         return
 
-    required_cols = {"fantasy position", "season", "points", "owner"}
+    required_cols = {"fantasy_position", "year", "points", "manager"}
     if required_cols.issubset(player_data.columns):
-        filtered = player_data[player_data["owner"] != "No Owner"].copy()
-        filtered["season"] = filtered["season"].astype(str)
+        filtered = player_data[player_data["manager"] != "No manager"].copy()
+        filtered["year"] = filtered["year"].astype(str)
 
         # Manager dropdown only
-        managers = sorted(filtered["owner"].unique())
+        managers = sorted(filtered["manager"].unique())
         manager = st.selectbox("Select Manager", ["All Managers"] + managers, key=f"{prefix}_manager")
         if manager != "All Managers":
-            filtered = filtered[filtered["owner"] == manager]
+            filtered = filtered[filtered["manager"] == manager]
 
         # Fixed position order
         position_order = ["QB", "RB", "WR", "TE", "W/R/T", "DEF", "K", "BN", "IR"]
-        available_positions = [pos for pos in position_order if pos in filtered["fantasy position"].unique()]
+        available_positions = [pos for pos in position_order if pos in filtered["fantasy_position"].unique()]
         default_positions = [pos for pos in available_positions if pos not in {"BN", "IR"}]
 
         with st.expander("Select Positions to Display", expanded=True):
@@ -34,20 +34,20 @@ def display_position_group_scoring_graphs(df_dict, prefix=""):
                     selected_positions.append(pos)
 
         if selected_positions:
-            filtered = filtered[filtered["fantasy position"].isin(selected_positions)]
+            filtered = filtered[filtered["fantasy_position"].isin(selected_positions)]
             grouped = (
                 filtered
-                .groupby(["fantasy position", "season"])["points"]
+                .groupby(["fantasy_position", "year"])["points"]
                 .mean()
                 .reset_index()
             )
             grouped["points"] = grouped["points"].round(2)
-            pivoted = grouped.pivot(index="season", columns="fantasy position", values="points")
+            pivoted = grouped.pivot(index="year", columns="fantasy_position", values="points")
             pivoted = pivoted[[pos for pos in position_order if pos in pivoted.columns]]
             pivoted = pivoted.round(2)
-            st.subheader("Average Points Per Game by Fantasy Position and Season")
+            st.subheader("Average Points Per Game by fantasy_position and year")
             st.line_chart(pivoted)
         else:
             st.info("No positions selected.")
     else:
-        st.info("Required columns ('fantasy position', 'season', 'points', 'owner') not found for charting.")
+        st.info("Required columns ('fantasy_position', 'year', 'points', 'manager') not found for charting.")

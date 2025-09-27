@@ -50,12 +50,12 @@ def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
     win_meta.sort(key=lambda t: t[0], reverse=True)
     ordered_win_cols = [c for _, c in win_meta]
 
-    needed = ['Manager'] + ordered_win_cols
+    needed = ['manager'] + ordered_win_cols
     needed = [c for c in needed if c in week_slice.columns]
 
     df = (week_slice[needed]
-          .drop_duplicates(subset=['Manager'])
-          .set_index('Manager')
+          .drop_duplicates(subset=['manager'])
+          .set_index('manager')
           .sort_index())
 
     # Rename xK_win -> K-(season_len-K)
@@ -97,17 +97,17 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
 
     seed_cols = sorted(seed_cols, key=lambda c: week_number_map[c])
 
-    cols = ['Manager'] + seed_cols
+    cols = ['manager'] + seed_cols
     cols = [c for c in cols if c in week_df.columns]
     df = (week_df[cols]
-          .drop_duplicates(subset=['Manager'])
-          .set_index('Manager')
+          .drop_duplicates(subset=['manager'])
+          .set_index('manager')
           .sort_index())
 
     if 'Playoff Seed to Date' in week_df.columns:
-        actual_seed = (week_df[['Manager', 'Playoff Seed to Date']]
-                       .drop_duplicates(subset=['Manager'])
-                       .set_index('Manager')['Playoff Seed to Date']
+        actual_seed = (week_df[['manager', 'Playoff Seed to Date']]
+                       .drop_duplicates(subset=['manager'])
+                       .set_index('manager')['Playoff Seed to Date']
                        .rename('Actual Seed'))
         df = df.join(actual_seed)
 

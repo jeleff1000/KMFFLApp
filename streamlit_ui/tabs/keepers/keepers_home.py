@@ -7,21 +7,21 @@ class KeeperDataViewer:
 
     def display(self):
         df = self.keeper_data.copy()
-        df['season'] = df['season'].astype(str)  # Ensure season is a string
-        df = df[df['owner'] != 'No Owner']
+        df['year'] = df['year'].astype(str)  # Ensure year is a string
+        df = df[df['manager'] != 'No manager']
         df = df[~df['position'].isin(['DEF', 'K'])]
-        df['owner'] = df['owner'].astype(str)
+        df['manager'] = df['manager'].astype(str)
 
-        # Filter to only the largest week in each season
-        max_week_per_season = df.groupby('season')['week'].transform('max')
-        df = df[df['week'] == max_week_per_season]
+        # Filter to only the largest week in each year
+        max_week_per_year = df.groupby('year')['week'].transform('max')
+        df = df[df['week'] == max_week_per_year]
 
-        owners = ["All"] + sorted(df['owner'].unique().tolist())
-        years = ["All"] + sorted(df['season'].unique().tolist())
+        managers = ["All"] + sorted(df['manager'].unique().tolist())
+        years = ["All"] + sorted(df['year'].unique().tolist())
 
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            selected_owners = st.multiselect("Select Owner(s)", owners, default=[], key="keepers_owner_multiselect")
+            selected_managers = st.multiselect("Select manager(s)", managers, default=[], key="keepers_manager_multiselect")
         with col2:
             selected_years = st.multiselect("Select Year(s)", years, default=[], key="keepers_year_multiselect")
         with col3:
@@ -29,13 +29,13 @@ class KeeperDataViewer:
             go_button = st.button("Go", key="keepers_go_button")
 
         if go_button:
-            if selected_owners and "All" not in selected_owners:
-                df = df[df['owner'].isin(selected_owners)]
+            if selected_managers and "All" not in selected_managers:
+                df = df[df['manager'].isin(selected_managers)]
             if selected_years and "All" not in selected_years:
-                df = df[df['season'].isin(selected_years)]
+                df = df[df['year'].isin(selected_years)]
 
             columns_to_display = [
-                'player', 'kept_next_year', 'Is Keeper Status', 'keeper_price', 'team', 'owner', 'position', 'season',
+                'player', 'kept_next_year', 'Is Keeper Status', 'keeper_price', 'team', 'manager', 'position', 'year',
                 'avg_points_this_year', 'avg_points_next_year', 'avg_$_next_year',
                 'cost', 'faab_bid', 'total_points_next_year'
             ]

@@ -12,7 +12,7 @@ class WeeklyMatchupDataViewer:
         self.player_df = player_df
 
     def filter_data(self, df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years):
-        filtered_df = df[df['Manager'].isin(selected_managers) & df['opponent'].isin(selected_opponents)]
+        filtered_df = df[df['manager'].isin(selected_managers) & df['opponent'].isin(selected_opponents)]
 
         if regular_season or playoffs or consolation:
             conditions = []
@@ -31,10 +31,10 @@ class WeeklyMatchupDataViewer:
 
     def display(self, prefix=""):
         if self.matchup_df is not None:
-            # Dropdown filters for Manager, opponent, year
+            # Dropdown filters for manager, opponent, year
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                managers = sorted(self.matchup_df['Manager'].unique().tolist())
+                managers = sorted(self.matchup_df['manager'].unique().tolist())
                 selected_managers = st.multiselect("Select Manager(s)", managers, default=[], key=f"{prefix}_managers")
                 if not selected_managers:
                     selected_managers = managers
@@ -63,7 +63,7 @@ class WeeklyMatchupDataViewer:
 
             # Filter the DataFrame based on selected filters
             filtered_df = self.matchup_df[
-                self.matchup_df['Manager'].isin(selected_managers) &
+                self.matchup_df['manager'].isin(selected_managers) &
                 self.matchup_df['opponent'].isin(selected_opponents) &
                 self.matchup_df['year'].isin(selected_years)
                 ]

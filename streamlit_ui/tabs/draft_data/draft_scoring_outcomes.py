@@ -4,28 +4,28 @@ import pandas as pd
 def display_scoring_outcomes(draft_data, player_df):
     st.header("Scoring Outcomes")
 
-    draft_data['Year'] = draft_data['Year'].astype(str)
-    draft_data['Team Manager'] = draft_data['Team Manager'].astype(str)
-    player_df['season'] = player_df['season'].astype(str)
+    draft_data['year'] = draft_data['year'].astype(str)
+    draft_data['manager'] = draft_data['manager'].astype(str)
+    player_df['year'] = player_df['year'].astype(str)
 
     if 'position' not in player_df.columns:
         st.error("The 'position' column is missing from player_df.")
         return
 
-    years = sorted(draft_data['Year'].unique().tolist())
-    team_managers = sorted(draft_data['Team Manager'].unique().tolist())
+    years = sorted(draft_data['year'].unique().tolist())
+    team_managers = sorted(draft_data['manager'].unique().tolist())
     allowed_primary_positions = ["QB", "RB", "WR", "TE", "DEF", "K"]
     primary_positions = [pos for pos in sorted(player_df['position'].unique().tolist()) if pos in allowed_primary_positions]
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        search_players = st.multiselect("Search Player", options=player_df['player'].unique().tolist(), default=[])
+        search_players = st.multiselect("Search Player", options=player_df['player_name'].unique().tolist(), default=[])
     with col2:
-        selected_team_managers = st.multiselect("Select Team Manager", team_managers, default=[])
+        selected_team_managers = st.multiselect("Select manager", team_managers, default=[])
 
     col3, col4 = st.columns([1, 1])
     with col3:
-        selected_years = st.multiselect("Select Year", years, default=[])
+        selected_years = st.multiselect("Select year", years, default=[])
     with col4:
         selected_primary_positions = st.multiselect("Select Primary Position", primary_positions, default=[])
 
@@ -36,80 +36,101 @@ def display_scoring_outcomes(draft_data, player_df):
         include_keepers = st.checkbox("Include Keepers", value=True, key="include_keepers")
 
     if selected_years:
-        draft_data = draft_data[draft_data['Year'].isin(selected_years)]
-        player_df = player_df[player_df['playeryear'].str.contains('|'.join(selected_years))]
+        draft_data = draft_data[draft_data['year'].isin(selected_years)]
+        player_df = player_df[player_df['year'].isin(selected_years)]
     if selected_team_managers:
-        draft_data = draft_data[draft_data['Team Manager'].isin(selected_team_managers)]
+        draft_data = draft_data[draft_data['manager'].isin(selected_team_managers)]
 
     merged_data = draft_data.merge(
-        player_df[['playeryear', 'player', 'points', 'week', 'season', 'position']],
-        left_on=['Name Full', 'Year'],
-        right_on=['player', 'season'],
+        player_df[['player_name', 'points', 'week', 'year', 'position']],
+        left_on=['player_name', 'year'],
+        right_on=['player_name', 'year'],
         how='left'
     )
 
     merged_data = merged_data[
-        ((merged_data['Year'].astype(int) < 2021) & (merged_data['week'] <= 16)) |
-        ((merged_data['Year'].astype(int) >= 2021) & (merged_data['week'] <= 17))
+        ((merged_data['year'].astype(int) < 2021) & (merged_data['week'] <= 16)) |
+        ((merged_data['year'].astype(int) >= 2021) & (merged_data['week'] <= 17))
     ]
 
     if include_drafted and not include_keepers:
-        merged_data = merged_data[merged_data['Is Keeper Status'] != 1]
+        merged_data = merged_data[merged_data['is_keeper_status'] != 1]
     elif not include_drafted and include_keepers:
-        merged_data = merged_data[merged_data['Is Keeper Status'] == 1]
+        merged_data = merged_data[merged_data['is_keeper_status'] == 1]
     elif not include_drafted and not include_keepers:
         merged_data = pd.DataFrame()
 
-    aggregated_data = merged_data.groupby(['season', 'player', 'position']).agg({
+    if merged_data.empty:
+        st.write("No data to display after filtering.")
+        return
+
+    # Use draft_data's primary_position for grouping and display
+    merged_data['position'] = merged_data['primary_position']
+
+    aggregated_data = merged_data.groupby(['year', 'player_name', 'position']).agg({
         'points': 'sum',
-        'Cost': 'first',
-        'Pick': 'first',
-        'Name Full': 'first',
-        'Team Manager': 'first',
+        'cost': 'first',
+        'pick': 'first',
+        'manager': 'first',
         'week': pd.Series.nunique
     }).reset_index()
 
-    aggregated_data['PPG'] = (aggregated_data['points'] / aggregated_data['week']).round(2)
+    aggregated_data['ppg'] = (aggregated_data['points'] / aggregated_data['week']).round(2)
 
-    # Fixed Cost Rank logic
-    def cost_rank_group(group):
-        year = str(group['season'].iloc[0])
+    def cost_rank_logic(row, group):
+        year = str(row['year'])
         if year in ['2014', '2015']:
-            # Find the largest Pick for the entire year
-            year_mask = aggregated_data['season'] == year
-            max_pick_year = aggregated_data.loc[year_mask, 'Pick'].max()
-            fill_value = max_pick_year + 1 if not pd.isna(max_pick_year) else 9999
-            group['Pick_filled'] = group['Pick'].fillna(fill_value)
-            return group['Pick_filled'].rank(method='first', ascending=True).astype(int)
+            max_pick = group['pick'].max()
+            fill_value = max_pick + 1 if not pd.isna(max_pick) else 9999
+            pick_filled = group['pick'].fillna(fill_value)
+            return pick_filled.rank(method='first', ascending=True)[row.name]
         else:
-            return group['Cost'].rank(method='first', ascending=False).astype(int)
+            return group['cost'].rank(method='first', ascending=False)[row.name]
 
-    aggregated_data['Cost Rank'] = aggregated_data.groupby(['season', 'position'], group_keys=False).apply(
-        cost_rank_group)
+    def cost_rank_transform(df):
+        result = pd.Series(index=df.index, dtype=int)
+        for (year, position), group in df.groupby(['year', 'position']):
+            for idx in group.index:
+                result[idx] = cost_rank_logic(df.loc[idx], group)
+        return result
 
-    aggregated_data['Total Points Rank'] = aggregated_data.groupby(['season', 'position'])['points'].rank(method='first', ascending=False).astype(int)
-    aggregated_data['PPG Rank'] = aggregated_data.groupby(['season', 'position'])['PPG'].rank(method='first', ascending=False).astype(int)
+    aggregated_data['cost_rank'] = cost_rank_transform(aggregated_data)
+    aggregated_data['total_points_rank'] = aggregated_data.groupby(['year', 'position'])['points'].transform(
+        lambda x: x.rank(method='first', ascending=False).astype(int)
+    )
+    aggregated_data['ppg_rank'] = aggregated_data.groupby(['year', 'position'])['ppg'].transform(
+        lambda x: x.rank(method='first', ascending=False).astype(int)
+    )
 
     aggregated_data.rename(columns={
-        'points': 'Total Points',
-        'Name Full': 'Player',
-        'week': 'Unique Weeks'
+        'points': 'total_points',
+        'player_name': 'Player',
+        'week': 'unique_weeks',
+        'cost_rank': 'Cost Rank',
+        'total_points_rank': 'Total Points Rank',
+        'ppg_rank': 'PPG Rank',
+        'total_points': 'Total Points',
+        'ppg': 'PPG',
+        'cost': 'Cost',
+        'manager': 'manager'
     }, inplace=True)
+
     aggregated_data = aggregated_data[aggregated_data['position'].isin(allowed_primary_positions)]
 
     if selected_primary_positions:
         aggregated_data = aggregated_data[aggregated_data['position'].isin(selected_primary_positions)]
     if search_players:
-        aggregated_data = aggregated_data[aggregated_data['player'].isin(search_players)]
+        aggregated_data = aggregated_data[aggregated_data['Player'].isin(search_players)]
 
     position_order = {pos: i for i, pos in enumerate(allowed_primary_positions)}
     aggregated_data['position_order'] = aggregated_data['position'].map(position_order)
 
     columns_to_display = [
-        'season', 'Player', 'position',
+        'year', 'Player', 'position',
         'Cost Rank', 'Total Points Rank', 'PPG Rank',
-        'Total Points', 'PPG', 'Cost', 'Team Manager'
+        'Total Points', 'PPG', 'Cost', 'manager'
     ]
+    columns_present = [col for col in columns_to_display if col in aggregated_data.columns]
 
-    st.write("Ranks are shown in the context of the player's positon and year")
-    st.dataframe(aggregated_data[columns_to_display], hide_index=True)
+    st.write("Ranks are shown in the context of the player's position and year")
+    st.dataframe(aggregated_data[columns_present], hide_index=True)

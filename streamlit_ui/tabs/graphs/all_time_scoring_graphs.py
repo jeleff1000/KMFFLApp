@@ -9,10 +9,16 @@ class AllTimeScoringStatsViewer:
     def display_all_time_scoring_graphs(self, prefix=""):
         st.header("All-Time Team Cumulative Points by Week")
         required_cols = {
-            'Manager', 'week', 'team_points', 'year', 'opponent',
-            'Final Playoff Seed', 'is_playoffs', 'is_consolation'
+            'manager', 'manager_week', 'team_points', 'year', 'opponent',
+            'final_playoff_seed', 'is_playoffs', 'is_consolation'
         }
         if self.df is not None and required_cols.issubset(self.df.columns) and not self.df.empty:
+            # Safely convert year to int, skipping invalid rows
+            self.df['year'] = pd.to_numeric(self.df['year'], errors='coerce')
+            self.df = self.df.dropna(subset=['year'])
+            if self.df.empty:
+                st.write("No valid data available for plotting after filtering year.")
+                return
             self.df['year'] = self.df['year'].astype(int)
             min_year = int(self.df['year'].min())
             max_year = int(self.df['year'].max())
@@ -27,12 +33,12 @@ class AllTimeScoringStatsViewer:
 
             col1, col2 = st.columns(2)
             with col1:
-                managers = sorted(self.df['Manager'].unique().tolist())
+                managers = sorted(self.df['manager'].unique().tolist())
                 selected_managers = st.multiselect(
                     "Select Manager(s)", managers, default=[], key=f"{prefix}_manager_multiselect"
                 )
             with col2:
-                seeds = sorted(self.df['Final Playoff Seed'].dropna().unique().tolist())
+                seeds = sorted(self.df['final_playoff_seed'].dropna().unique().tolist())
                 selected_seeds = st.multiselect(
                     "Select Final Playoff Seed(s)", seeds, default=[], key=f"{prefix}_seed_multiselect"
                 )
@@ -55,50 +61,50 @@ class AllTimeScoringStatsViewer:
                 mask_all |= df_season_type['is_consolation'] == 1
             df_season_type = df_season_type[mask_all]
             df_season_type = df_season_type[(df_season_type['year'] >= start_year) & (df_season_type['year'] <= end_year)]
-            if 'Cumulative Week' not in df_season_type.columns:
-                df_season_type = df_season_type.sort_values(['year', 'week'])
-                df_season_type['Cumulative Week'] = range(1, len(df_season_type) + 1)
+            if 'cumulative_week' not in df_season_type.columns:
+                df_season_type = df_season_type.sort_values(['year', 'manager_week'])
+                df_season_type['cumulative_week'] = range(1, len(df_season_type) + 1)
 
             df_filtered = df_season_type.copy()
             if selected_managers:
-                df_filtered = df_filtered[df_filtered['Manager'].isin(selected_managers)]
+                df_filtered = df_filtered[df_filtered['manager'].isin(selected_managers)]
             if selected_seeds:
-                df_filtered = df_filtered[df_filtered['Final Playoff Seed'].isin(selected_seeds)]
+                df_filtered = df_filtered[df_filtered['final_playoff_seed'].isin(selected_seeds)]
 
-            df_filtered = df_filtered.sort_values(['Manager', 'year', 'week'])
+            df_filtered = df_filtered.sort_values(['manager', 'year', 'manager_week'])
             df_filtered['team_points'] = df_filtered['team_points'].round(2)
 
             # Cumulative points per manager
-            df_filtered['Manager Cumulative Points'] = (
-                df_filtered.groupby('Manager')['team_points'].cumsum()
+            df_filtered['manager_cumulative_points'] = (
+                df_filtered.groupby('manager')['team_points'].cumsum()
             )
 
             # Season boundary positions (first cumulative week per year)
             year_boundaries = (
-                df_season_type.groupby('year')['Cumulative Week']
+                df_season_type.groupby('year')['cumulative_week']
                 .min()
                 .reset_index()
             )
 
-            # Base line chart: no weekly x-grid; keep horizontal y-grid; y auto-scales
+            # Base line chart
             base_line = alt.Chart(df_filtered).mark_line().encode(
                 x=alt.X(
-                    'Cumulative Week:O',
+                    'cumulative_week:O',
                     axis=alt.Axis(title='Cumulative Week', grid=False)
                 ),
                 y=alt.Y(
-                    'Manager Cumulative Points:Q',
+                    'manager_cumulative_points:Q',
                     title='Cumulative Points',
                     axis=alt.Axis(grid=True),
                     scale=alt.Scale(zero=False, nice=True)
                 ),
-                color='Manager:N',
+                color=alt.Color('manager:N', title='Manager'),
                 tooltip=[
-                    alt.Tooltip('Manager:N'),
+                    alt.Tooltip('manager:N', title='Manager'),
                     alt.Tooltip('year:Q', title='Year'),
-                    alt.Tooltip('week:Q', title='Week'),
-                    alt.Tooltip('Cumulative Week:Q'),
-                    alt.Tooltip('Manager Cumulative Points:Q', format='.2f')
+                    alt.Tooltip('manager_week:Q', title='Week'),
+                    alt.Tooltip('cumulative_week:Q', title='Cumulative Week'),
+                    alt.Tooltip('manager_cumulative_points:Q', title='Cumulative Points', format='.2f')
                 ]
             ).properties(width=800, height=400)
 
@@ -106,7 +112,7 @@ class AllTimeScoringStatsViewer:
             year_rules = (
                 alt.Chart(year_boundaries)
                 .mark_rule(color='#bdbdbd', strokeDash=[4, 3], strokeWidth=1)
-                .encode(x=alt.X('Cumulative Week:O', title=None))
+                .encode(x=alt.X('cumulative_week:O', title=None))
             )
 
             # Year labels at the top
@@ -114,14 +120,18 @@ class AllTimeScoringStatsViewer:
                 alt.Chart(year_boundaries)
                 .mark_text(fontSize=12, font='sans-serif', color='black', baseline='top', dy=6)
                 .encode(
-                    x=alt.X('Cumulative Week:O'),
+                    x=alt.X('cumulative_week:O'),
                     y=alt.value(0),
-                    text=alt.Text('year:N')
+                    text=alt.Text('year:N', title='Year')
                 )
             )
 
             chart = alt.layer(year_rules, base_line, year_labels)
             st.altair_chart(chart, use_container_width=True)
+        else:
+            st.write(
+                "Required columns (`manager`, `manager_week`, `team_points`, `year`, `opponent`, `final_playoff_seed`, `is_playoffs`, `is_consolation`) are missing or DataFrame is empty."
+            )
 
 def display_all_time_scoring_graphs(df_dict, prefix=""):
     df = df_dict.get("Matchup Data")

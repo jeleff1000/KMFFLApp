@@ -11,17 +11,17 @@ def calculate_std_dev(df, selected_year, show_regular_season, show_postseason):
     if not show_postseason:
         df = df[df['is_playoffs'] == False]
 
-    # Group by Manager and calculate standard deviation of team_points
-    std_dev_df = df.groupby('Manager')['team_points'].std().reset_index()
-    std_dev_df.columns = ['Manager', 'StdDev_TeamPoints']
+    # Group by manager and calculate standard deviation of team_points
+    std_dev_df = df.groupby('manager')['team_points'].std().reset_index()
+    std_dev_df.columns = ['manager', 'StdDev_TeamPoints']
 
     return std_dev_df
 
 def tweak_scores(df, std_dev_df):
     # Merge the standard deviation data with the original DataFrame
-    df = df.merge(std_dev_df, on='Manager', how='left')
+    df = df.merge(std_dev_df, on='manager', how='left')
 
-    # Tweak the scores by adding or subtracting up to 1/3 of the Manager's std_dev
+    # Tweak the scores by adding or subtracting up to 1/3 of the manager's std_dev
     df['tweaked_team_points'] = df.apply(
         lambda row: row['team_points'] + np.random.uniform(-1/3, 1/3) * row['StdDev_TeamPoints'], axis=1
     )
@@ -32,7 +32,7 @@ def tweak_scores(df, std_dev_df):
 
     # Update Sim_Wins and Sim_Losses based on tweaked scores
     for index, row in df.iterrows():
-        opponent_week = df[(df['Manager'] == row['opponent']) & (df['week'] == row['week'])]
+        opponent_week = df[(df['manager'] == row['opponent']) & (df['week'] == row['week'])]
         if not opponent_week.empty:
             opponent_points = opponent_week.iloc[0]['team_points']
             if row['tweaked_team_points'] > opponent_points:
@@ -44,7 +44,7 @@ def tweak_scores(df, std_dev_df):
 
 def calculate_playoff_seed(df):
     # Aggregate wins and tweaked_team_points for each manager
-    agg_df = df.groupby('Manager').agg(
+    agg_df = df.groupby('manager').agg(
         Sim_Wins=('Sim_Wins', 'sum'),
         Total_Tweaked_Points=('tweaked_team_points', 'sum')
     ).reset_index()
@@ -56,7 +56,7 @@ def calculate_playoff_seed(df):
     agg_df['Sim_Playoff_Seed'] = range(1, len(agg_df) + 1)
 
     # Merge the playoff seeds back to the original DataFrame
-    df = df.merge(agg_df[['Manager', 'Sim_Playoff_Seed']], on='Manager', how='left')
+    df = df.merge(agg_df[['manager', 'Sim_Playoff_Seed']], on='manager', how='left')
 
     return df
 

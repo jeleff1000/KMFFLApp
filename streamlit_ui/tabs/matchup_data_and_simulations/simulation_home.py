@@ -44,7 +44,7 @@ class SimulationDataViewer:
             elif what_if_choice == "Everyone's Schedule":
                 EveryonesScheduleViewer(self.matchup_data_df, self.player_data_df).display()
             elif what_if_choice == "Vs. One Opponent":
-                VsOneOpponentViewer(self.matchup_data_df, self.player_data_df).display()
+                VsOneOpponentViewer(self.matchup_data_df).display()
             elif what_if_choice == "Expected Record + Seed":
                 display_expected_record_and_seed(self.matchup_data_df, self.player_data_df)
             elif what_if_choice == "Tweak Scoring":

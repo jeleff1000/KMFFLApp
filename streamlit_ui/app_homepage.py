@@ -27,10 +27,10 @@ from streamlit_ui.tabs.graphs.graphs_overview import display_graphs_overview
 def load_parquet_dfs():
     base_dir = os.path.dirname(__file__)
     files = {
-        "Injury Data": "Sheet 2.0_Injury Data.parquet",
+        "Injury Data": "Sheet 2.0_Injuries.parquet",
         "Schedules": "Sheet 2.0_Schedules.parquet",
         "All Transactions": "Sheet 2.0_All Transactions.parquet",
-        "Draft History": "Sheet 2.0_Draft History.parquet",
+        "Draft History": "Sheet 2.0_Draft.parquet",
         "Player Data": "Sheet 2.0_Player Data.parquet",
         "Matchup Data": "Sheet 2.0_Matchup Data.parquet",
     }

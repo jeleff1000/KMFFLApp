@@ -6,7 +6,6 @@ from .season_projected_stats import SeasonProjectedStatsViewer
 from .season_optimal_lineups import display_season_optimal_lineup
 from .season_team_ratings import SeasonTeamRatingsViewer
 
-
 class SeasonMatchupOverviewViewer:
     def __init__(self, df, player_df):
         self.df = df
@@ -24,7 +23,7 @@ class SeasonMatchupOverviewViewer:
                 conditions.append(filtered_df['is_consolation'] == 1)
             filtered_df = filtered_df[pd.concat(conditions, axis=1).any(axis=1)]
         if selected_managers:
-            filtered_df = filtered_df[filtered_df['Manager'].isin(selected_managers)]
+            filtered_df = filtered_df[filtered_df['manager'].isin(selected_managers)]
         if selected_opponents:
             filtered_df = filtered_df[filtered_df['opponent'].isin(selected_opponents)]
         if selected_years:
@@ -36,23 +35,23 @@ class SeasonMatchupOverviewViewer:
             st.write("No data available")
             return
 
-        # Dropdown filters for Manager, opponent, and year
+        # Dropdown filters for manager, opponent, and year
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            managers = sorted(self.df['Manager'].unique().tolist())
-            selected_managers = st.multiselect("Select Manager(s)", managers, default=[], key=f"{prefix}_managers")
+            managers = sorted(self.df['manager'].unique().tolist())
+            selected_managers = st.multiselect("Select manager(s)", managers, default=[], key=f"{prefix}_managers")
             if not selected_managers:
-                selected_managers = managers  # Select all managers if empty
+                selected_managers = managers
         with col2:
             opponents = sorted(self.df['opponent'].unique().tolist())
             selected_opponents = st.multiselect("Select Opponent(s)", opponents, default=[], key=f"{prefix}_opponents")
             if not selected_opponents:
-                selected_opponents = opponents  # Select all opponents if empty
+                selected_opponents = opponents
         with col3:
             years = sorted(self.df['year'].astype(int).unique().tolist())
             selected_years = st.multiselect("Select Year(s)", years, default=[], key=f"{prefix}_years")
             if not selected_years:
-                selected_years = years  # Select all years if empty
+                selected_years = years
 
         # Checkboxes for game types
         col4, col5, col6 = st.columns([1, 1, 1])
@@ -66,7 +65,7 @@ class SeasonMatchupOverviewViewer:
         # Apply filters
         filtered_df = self.filter_data(self.df, regular_season, playoffs, consolation, selected_managers, selected_opponents, selected_years)
 
-        # Tabs with a new "Season Team Ratings" table
+        # Tabs for stats
         tab_names = ["Matchup Stats", "Advanced Stats", "Projected Stats", "Optimal Stats", "Team Ratings"]
         tabs = st.tabs(tab_names)
         for i, tab_name in enumerate(tab_names):
@@ -78,12 +77,12 @@ class SeasonMatchupOverviewViewer:
                     viewer = SeasonAdvancedStatsViewer(filtered_df)
                     viewer.display(prefix=f"{prefix}_advanced_stats")
                 elif tab_name == "Projected Stats":
-                    viewer = SeasonProjectedStatsViewer(filtered_df, self.df)  # self.df is always unfiltered
+                    viewer = SeasonProjectedStatsViewer(filtered_df, self.df)
                     viewer.display(prefix=f"{prefix}_projected_stats")
                 elif tab_name == "Optimal Stats":
                     display_season_optimal_lineup(self.player_df, filtered_df, self.df)
                 elif tab_name == "Team Ratings":
-                    viewer = SeasonTeamRatingsViewer(filtered_df)  # aggregates internally by season
+                    viewer = SeasonTeamRatingsViewer(filtered_df)
                     viewer.display(prefix=f"{prefix}_season_team_ratings")
 
         st.subheader("Summary Data")

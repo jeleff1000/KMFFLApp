@@ -34,7 +34,7 @@ class StreamlitWeeklyPlayerDataViewer:
         filtered_data = self.player_data
         for column, values in filters.items():
             if values:  # Treat empty lists as "All"
-                if column == "season":
+                if column == "year":
                     values = [str(value) for value in values]  # Convert filter values to strings
                     filtered_data[column] = filtered_data[column].astype(str)  # Convert column values to strings
                 filtered_data = filtered_data[filtered_data[column].isin(values)]
@@ -47,72 +47,72 @@ class StreamlitWeeklyPlayerDataViewer:
         def display_filters(tab_index):
             selected_filters = {}
 
-            # First row: Player search bar, Owner dropdown, and Rostered toggle
+            # First row: Player search bar, manager dropdown, and Rostered toggle
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
                 player_search = st.text_input("Search Player", key=f"player_search_{tab_index}")
             with col2:
-                owner_values = st.multiselect("Select Owner", self.get_unique_values("owner"),
-                                              key=f"owner_value_{tab_index}")
+                manager_values = st.multiselect("Select manager", self.get_unique_values("manager"),
+                                              key=f"manager_value_{tab_index}")
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_index}")
             if player_search:
                 selected_filters["player"] = [player for player in self.player_data['player'].unique() if
                                               player_search.lower() in player.lower()]
-            selected_filters["owner"] = owner_values
+            selected_filters["manager"] = manager_values
 
-            # Filter out players with "No Owner" if toggle is on
+            # Filter out players with "No manager" if toggle is on
             if show_rostered:
-                selected_filters["owner"] = [owner for owner in selected_filters["owner"] if owner != "No Owner"]
-                if not selected_filters["owner"]:
-                    selected_filters["owner"] = [owner for owner in self.get_unique_values("owner") if
-                                                 owner != "No Owner"]
+                selected_filters["manager"] = [manager for manager in selected_filters["manager"] if manager != "No manager"]
+                if not selected_filters["manager"]:
+                    selected_filters["manager"] = [manager for manager in self.get_unique_values("manager") if
+                                                 manager != "No manager"]
 
-            # Second row: Position and Fantasy Position filters
+            # Second row: Position and fantasy_position filters
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
                 position_values = st.multiselect("Select Position",
                                                  self.get_unique_values("position"),
                                                  key=f"position_value_{tab_index}")
             with col2:
-                fantasy_position_values = st.multiselect("Select Fantasy Position",
-                                                         self.get_unique_values("fantasy position"),
+                fantasy_position_values = st.multiselect("Select fantasy_position",
+                                                         self.get_unique_values("fantasy_position"),
                                                          key=f"fantasy_position_value_{tab_index}")
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_started = st.toggle("Started", value=False, key=f"show_started_{tab_index}")
             selected_filters["position"] = position_values
-            selected_filters["fantasy position"] = fantasy_position_values
+            selected_filters["fantasy_position"] = fantasy_position_values
 
-            # Filter out players with fantasy position BN or IR if toggle is on
+            # Filter out players with fantasy_position BN or IR if toggle is on
             if show_started:
-                selected_filters["fantasy position"] = [pos for pos in selected_filters["fantasy position"] if
+                selected_filters["fantasy_position"] = [pos for pos in selected_filters["fantasy_position"] if
                                                         pos not in ["BN", "IR"]]
-                if not selected_filters["fantasy position"]:
-                    selected_filters["fantasy position"] = [pos for pos in
-                                                            self.get_unique_values("fantasy position")
+                if not selected_filters["fantasy_position"]:
+                    selected_filters["fantasy_position"] = [pos for pos in
+                                                            self.get_unique_values("fantasy_position")
                                                             if pos not in ["BN", "IR"]]
 
-            # Third row: Team, Opponent Team, Week, and Year filters
+            # Third row: Team, opponent_team, Week, and Year filters
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 team_values = st.multiselect("Select Team", self.get_unique_values("team"),
                                              key=f"team_value_{tab_index}")
             with col2:
-                opponent_team_values = st.multiselect("Select Opponent Team",
+                opponent_team_values = st.multiselect("Select opponent_team",
                                                       self.get_unique_values("opponent_team"),
                                                       key=f"opponent_team_value_{tab_index}")
             with col3:
                 week_values = st.multiselect("Select Week", self.get_unique_values("week"),
                                              key=f"week_value_{tab_index}")
             with col4:
-                year_values = st.multiselect("Select Year", self.get_unique_values("season"),
+                year_values = st.multiselect("Select Year", self.get_unique_values("year"),
                                              key=f"year_value_{tab_index}")
             selected_filters["team"] = team_values
             selected_filters["opponent_team"] = opponent_team_values
             selected_filters["week"] = week_values
-            selected_filters["season"] = year_values
+            selected_filters["year"] = year_values
 
             filtered_data = self.apply_filters(selected_filters)
 
@@ -142,18 +142,18 @@ class StreamlitWeeklyPlayerDataViewer:
             # Create a row with three dropdowns and a "Go" button
             col1, col2, col3, col4 = st.columns([1, 1, 1, 0.5])
             with col1:
-                selected_year = st.selectbox("Select Year", self.get_unique_values("season"), key="h2h_year_value")
+                selected_year = st.selectbox("Select Year", self.get_unique_values("year"), key="h2h_year_value")
             with col2:
                 selected_week = st.selectbox(
                     "Select Week",
-                    self.get_unique_values("week", filters={"season": [selected_year]}),
+                    self.get_unique_values("week", filters={"year": [selected_year]}),
                     key="h2h_week_value"
                 ) if selected_year else None
             with col3:
                 selected_matchup_name = st.selectbox(
                     "Select Matchup Name",
                     self.get_unique_values("matchup_name",
-                                           filters={"season": [selected_year], "week": [selected_week]}),
+                                           filters={"year": [selected_year], "week": [selected_week]}),
                     key="h2h_matchup_name_value"
                 ) if selected_year and selected_week else None
             with col4:
@@ -162,7 +162,7 @@ class StreamlitWeeklyPlayerDataViewer:
             # Display H2H Viewer only when "Go" is clicked and all filters are selected
             if go_button and selected_year and selected_week and selected_matchup_name:
                 filtered_data = self.apply_filters({
-                    "season": [selected_year],
+                    "year": [selected_year],
                     "week": [selected_week],
                     "matchup_name": [selected_matchup_name]
                 })

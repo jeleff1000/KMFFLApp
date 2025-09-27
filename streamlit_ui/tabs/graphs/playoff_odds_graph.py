@@ -18,8 +18,17 @@ class PlayoffOddsViewer:
     def display(self):
         st.subheader("Odds Over Time")
 
-        # Keep all weeks; still exclude consolation
-        df = self.df[(self.df["is_consolation"] == 0)].copy()
+        df = self.df[self.df["is_consolation"] == 0].copy()
+        # Safely convert year and week to int, skipping invalid rows
+        df["year"] = pd.to_numeric(df["year"], errors="coerce")
+        df["week"] = pd.to_numeric(df["week"], errors="coerce")
+        df = df.dropna(subset=["year", "week"])
+        if df.empty:
+            st.info("No valid data available for plotting after filtering year/week.")
+            return
+        df["year"] = df["year"].astype(int)
+        df["week"] = df["week"].astype(int)
+
         seasons = sorted(df["year"].unique())
         if not seasons:
             st.info("No seasons available.")
@@ -27,7 +36,6 @@ class PlayoffOddsViewer:
 
         min_year, max_year = int(seasons[0]), int(seasons[-1])
 
-        # Year range (default to current/latest season only)
         col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
         start_year = col1.number_input(
             "Start Year",
@@ -53,7 +61,6 @@ class PlayoffOddsViewer:
         )
         go_clicked = col4.button("Go", key="go_graph")
 
-        # Week range boxes (based on ALL weeks observed, including playoffs)
         min_week = int(df["week"].min())
         max_week = int(df["week"].max())
 
@@ -98,12 +105,11 @@ class PlayoffOddsViewer:
             st.session_state.ts_year_range = (int(start_year), int(end_year))
             st.session_state.ts_week_range = (int(start_week), int(end_week))
 
-        # Replace Clear button with a Champions Only checkbox (default off)
         champions_only = st.checkbox(
             "Champions Only",
             value=False,
             key="champions_only_checkbox",
-            help="Show only rows where Champion == 1",
+            help="Show only rows where champion == 1",
         )
 
         if (
@@ -116,15 +122,14 @@ class PlayoffOddsViewer:
 
         timeseries = st.session_state.ts_data
 
-        # Apply champions-only filter dynamically
         if champions_only:
-            timeseries = timeseries[timeseries["Champion"] == 1]
+            timeseries = timeseries[timeseries["champion"] == 1]
 
         if timeseries.empty:
             st.info("No data for selected filters.")
             return
 
-        managers = sorted(timeseries["Manager"].unique())
+        managers = sorted(timeseries["manager"].unique())
         selected_mgrs = st.multiselect(
             "Select Managers (leave empty for all)",
             managers,
@@ -133,22 +138,21 @@ class PlayoffOddsViewer:
         )
         effective_mgrs = managers if len(selected_mgrs) == 0 else selected_mgrs
 
-        plot_df = timeseries[timeseries["Manager"].isin(effective_mgrs)].copy()
+        plot_df = timeseries[timeseries["manager"].isin(effective_mgrs)].copy()
         if plot_df.empty:
             st.info("No data for selected managers.")
             return
 
-        # Ensure clean line ordering within season
-        plot_df = plot_df.sort_values(["Manager", "year", "week"], kind="mergesort")
+        plot_df = plot_df.sort_values(["manager", "year", "week"], kind="mergesort")
 
         fig = px.line(
             plot_df,
             x="week",
             y=metric,
-            color="Manager",
-            line_group=plot_df["Manager"].astype(str) + "_" + plot_df["year"].astype(str),
+            color="manager",
+            line_group=plot_df["manager"].astype(str) + "_" + plot_df["year"].astype(str),
             markers=True,
-            labels={"week": "Week", metric: METRIC_LABELS[metric], "Manager": "Manager"},
+            labels={"week": "Week", metric: METRIC_LABELS[metric], "manager": "Manager"},
             hover_data={"year": True, "week": True},
         )
         fig.update_layout(

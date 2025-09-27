@@ -11,7 +11,7 @@ class SeasonStandingsViewer:
         if 'is_consolation' in df.columns:
             df = df[df['is_consolation'] != 1].copy()
 
-        if 'win' in df.columns:
+        if all(col in df.columns for col in ['win', 'manager', 'year', 'team_name']):
             df['win'] = df['win'] == 1
             df['loss'] = df['win'] == 0
 
@@ -19,13 +19,13 @@ class SeasonStandingsViewer:
             aggregation_func = 'mean' if aggregation_type else 'sum'
 
             sacko_flags = []
-            if 'Sacko' in df.columns:
-                for (manager, year), group in df.groupby(['Manager', 'year']):
-                    sacko_flag = group['Sacko'].eq(1).any()
-                    sacko_flags.append({'Manager': manager, 'year': year, 'Sacko': sacko_flag})
+            if 'sacko' in df.columns:
+                for (manager, year), group in df.groupby(['manager', 'year']):
+                    sacko_flag = group['sacko'].eq(1).any()
+                    sacko_flags.append({'manager': manager, 'year': year, 'sacko': sacko_flag})
             else:
-                for (manager, year), group in df.groupby(['Manager', 'year']):
-                    sacko_flags.append({'Manager': manager, 'year': year, 'Sacko': False})
+                for (manager, year), group in df.groupby(['manager', 'year']):
+                    sacko_flags.append({'manager': manager, 'year': year, 'sacko': False})
             sacko_df = pd.DataFrame(sacko_flags)
 
             agg_dict = {
@@ -37,15 +37,16 @@ class SeasonStandingsViewer:
                 'quarterfinal': aggregation_func,
                 'semifinal': aggregation_func,
                 'championship': aggregation_func,
-                'Champion': aggregation_func
+                'champion': aggregation_func,
+                'team_name': 'first'
             }
 
-            aggregated_df = df.groupby(['Manager', 'year']).agg(agg_dict).reset_index()
-            aggregated_df = pd.merge(aggregated_df, sacko_df, on=['Manager', 'year'], how='left')
+            aggregated_df = df.groupby(['manager', 'year']).agg(agg_dict).reset_index()
+            aggregated_df = pd.merge(aggregated_df, sacko_df, on=['manager', 'year'], how='left')
 
-            if 'Final Playoff Seed' in df.columns:
-                seed_df = df[['Manager', 'year', 'Final Playoff Seed']].drop_duplicates(subset=['Manager', 'year'])
-                aggregated_df = pd.merge(aggregated_df, seed_df, on=['Manager', 'year'], how='left')
+            if 'final_playoff_seed' in df.columns:
+                seed_df = df[['manager', 'year', 'final_playoff_seed']].drop_duplicates(subset=['manager', 'year'])
+                aggregated_df = pd.merge(aggregated_df, seed_df, on=['manager', 'year'], how='left')
 
             if aggregation_type:
                 columns_to_round_2 = ['team_points', 'opponent_score']
@@ -55,10 +56,16 @@ class SeasonStandingsViewer:
 
             aggregated_df['year'] = aggregated_df['year'].astype(str)
 
+            years_with_champion = set(df[df['champion'] == 1]['year'].astype(str).unique())
+            all_years = set(aggregated_df['year'].unique())
+            in_progress_years = all_years - years_with_champion
+
             def get_final_result(row):
-                if row.get('Sacko', False):
+                if row['year'] in in_progress_years:
+                    return "Season in Progress"
+                if row.get('sacko', False):
                     return "Sacko"
-                if row.get('Champion', 0) > 0:
+                if row.get('champion', 0) > 0:
                     return "Champion"
                 if row.get('championship', 0) > 0:
                     return "Lost in Championship"
@@ -72,13 +79,15 @@ class SeasonStandingsViewer:
 
             aggregated_df['Final Result'] = aggregated_df.apply(get_final_result, axis=1)
 
-            display_columns = ['Final Playoff Seed', 'Manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Final Result'] \
-                if 'Final Playoff Seed' in aggregated_df.columns else \
-                ['Manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Final Result']
+            display_columns = ['final_playoff_seed', 'manager', 'team_name', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Final Result'] \
+                if 'final_playoff_seed' in aggregated_df.columns else \
+                ['manager', 'team_name', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Final Result']
 
             display_df = aggregated_df[display_columns]
             display_df = display_df.rename(columns={
-                'Final Playoff Seed': 'Seed',
+                'final_playoff_seed': 'Seed',
+                'manager': 'Manager',
+                'team_name': 'Team',
                 'year': 'Year',
                 'win': 'W',
                 'loss': 'L',
@@ -87,20 +96,12 @@ class SeasonStandingsViewer:
             })
 
             years = sorted(display_df['Year'].unique())
-            most_recent_year = years[-1] if years else None
-
             selected_year = st.selectbox("Select Year", years, index=len(years)-1, key=f"{prefix}_year")
             filtered_df = display_df[display_df['Year'] == selected_year]
             if 'Seed' in filtered_df.columns:
                 filtered_df = filtered_df.sort_values('Seed', ascending=True)
-            st.dataframe(filtered_df, hide_index=True)
-        else:
-            st.write("The required column 'win' is not available in the data.")
+            st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
-def display_season_standings(df_dict, prefix="season_standings"):
-    df = df_dict.get("Matchup Data")
-    if df is not None:
-        viewer = SeasonStandingsViewer(df)
-        viewer.display(prefix=prefix)
-    else:
-        st.write("No matchup data available.")
+def display_season_standings(df, prefix=""):
+    viewer = SeasonStandingsViewer(df)
+    viewer.display(prefix)

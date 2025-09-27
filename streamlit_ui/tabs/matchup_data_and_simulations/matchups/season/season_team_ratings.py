@@ -8,9 +8,9 @@ import streamlit as st
 class SeasonTeamRatingsViewer:
     """
     Season-level Streamlit viewer for team ratings.
-    - Aggregates weekly rows by [Manager, year].
+    - Aggregates weekly rows by [manager, year].
     - Hides `week` and `opponent`.
-    - Leading order: Manager, year, win, loss, team_points, opponent_score, power_rating, power rating.
+    - Leading order: manager, year, win, loss, team_points, opponent_score, power_rating, power rating.
     - Shows only known original columns (no extras).
     - No download button.
     """
@@ -39,7 +39,7 @@ class SeasonTeamRatingsViewer:
 
         # Leading display order (season)
         self.leading_order: List[str] = [
-            "Manager", "year", "win", "loss",
+            "manager", "year", "win", "loss",
             "team_points", "opponent_score", "power_rating", "power rating",
         ]
 
@@ -77,9 +77,9 @@ class SeasonTeamRatingsViewer:
 
         df_sorted = df.copy()
         if "week" in df_sorted.columns:
-            df_sorted = df_sorted.sort_values(["Manager", "year", "week"])
+            df_sorted = df_sorted.sort_values(["manager", "year", "week"])
 
-        group_keys = [k for k in ["Manager", "year"] if k in df_sorted.columns]
+        group_keys = [k for k in ["manager", "year"] if k in df_sorted.columns]
         if not group_keys:
             return df_sorted.copy()
 

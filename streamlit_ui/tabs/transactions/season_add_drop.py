@@ -6,9 +6,9 @@ def display_season_add_drop(transaction_df, player_df, return_df=False):
     transaction_df['nickname'].fillna('Unknown', inplace=True)
 
     # Merge the dataframes for Weekly Add/Drop using left join, selecting only necessary columns
-    merged_df = pd.merge(transaction_df[['transaction_id', 'name', 'week', 'year', 'transaction_type', 'faab_bid', 'nickname']],
-                         player_df[['player', 'week', 'season', 'rolling_point_total', 'position']],
-                         left_on=['name', 'week', 'year'], right_on=['player', 'week', 'season'], how='left')
+    merged_df = pd.merge(transaction_df[['transaction_id', 'player_name', 'week', 'year', 'transaction_type', 'faab_bid', 'nickname']],
+                         player_df[['player', 'week', 'year', 'rolling_point_total', 'position']],
+                         left_on=['player_name', 'week', 'year'], right_on=['player', 'week', 'year'], how='left')
 
     # Ensure nickname column has no missing values after merge
     merged_df['nickname'].fillna('Unknown', inplace=True)
@@ -24,14 +24,14 @@ def display_season_add_drop(transaction_df, player_df, return_df=False):
     add_transactions = merged_df[merged_df['transaction_type'] == 'add']
 
     # Find the maximum week up to week 16 for years 2020 and earlier, and up to week 17 for years 2021 and later
-    max_week_up_to_16 = player_df[(player_df['week'] <= 16) & (player_df['season'] <= 2020)].groupby(['player', 'season'])['week'].idxmax()
-    max_week_up_to_17 = player_df[(player_df['week'] <= 17) & (player_df['season'] >= 2021)].groupby(['player', 'season'])['week'].idxmax()
-    points_max_week_up_to_16 = player_df.loc[max_week_up_to_16].set_index(['player', 'season'])['rolling_point_total']
-    points_max_week_up_to_17 = player_df.loc[max_week_up_to_17].set_index(['player', 'season'])['rolling_point_total']
+    max_week_up_to_16 = player_df[(player_df['week'] <= 16) & (player_df['year'] <= 2020)].groupby(['player', 'year'])['week'].idxmax()
+    max_week_up_to_17 = player_df[(player_df['week'] <= 17) & (player_df['year'] >= 2021)].groupby(['player', 'year'])['week'].idxmax()
+    points_max_week_up_to_16 = player_df.loc[max_week_up_to_16].set_index(['player', 'year'])['rolling_point_total']
+    points_max_week_up_to_17 = player_df.loc[max_week_up_to_17].set_index(['player', 'year'])['rolling_point_total']
 
     # Map the points for the maximum week up to week 16 or 17 based on the year
     merged_df['points_week_max'] = merged_df.apply(
-        lambda row: points_max_week_up_to_16.get((row['name'], row['year']), 0) if row['year'] <= 2020 else points_max_week_up_to_17.get((row['name'], row['year']), 0),
+        lambda row: points_max_week_up_to_16.get((row['player_name'], row['year']), 0) if row['year'] <= 2020 else points_max_week_up_to_17.get((row['player_name'], row['year']), 0),
         axis=1
     )
 
@@ -79,9 +79,9 @@ def display_season_add_drop(transaction_df, player_df, return_df=False):
     # Add search bars in rows
     col1, col2 = st.columns(2)
     with col1:
-        year_search = st.selectbox('Search by Year', options=['All'] + list(aggregated_df['year'].unique()), key='year_search_season')
+        year_search = st.selectbox('Search by Year', options=['All'] + list(aggregated_df['year'].unique()), key='year_search_year')
     with col2:
-        nickname_search = st.text_input('Search by Manager', key='nickname_search_season')
+        nickname_search = st.text_input('Search by Manager', key='nickname_search_year')
 
     # Filter the DataFrame based on search inputs
     if year_search and year_search != 'All':

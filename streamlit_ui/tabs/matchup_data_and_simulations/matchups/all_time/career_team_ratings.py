@@ -40,7 +40,7 @@ class CareerTeamRatingsViewer:
 
         # Leading display order (career)
         self.leading_order: List[str] = [
-            "Manager", "win", "loss",
+            "manager", "win", "loss",
             "team_points", "opponent_score", "power_rating", "power rating",
         ]
 
@@ -64,16 +64,16 @@ class CareerTeamRatingsViewer:
         return s.iloc[-1] if not s.empty else pd.NA
 
     def _aggregate_by_season(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Apply season-level rules per [Manager, year]."""
+        """Apply season-level rules per [manager, year]."""
         if df.empty:
             return df.copy()
 
         df_sorted = df.copy()
-        sort_keys = [k for k in ["Manager", "year", "week"] if k in df_sorted.columns]
+        sort_keys = [k for k in ["manager", "year", "week"] if k in df_sorted.columns]
         if sort_keys:
             df_sorted = df_sorted.sort_values(sort_keys)
 
-        group_keys = [k for k in ["Manager", "year"] if k in df_sorted.columns]
+        group_keys = [k for k in ["manager", "year"] if k in df_sorted.columns]
         if not group_keys:
             return df_sorted.copy()
 
@@ -122,12 +122,12 @@ class CareerTeamRatingsViewer:
         return grouped
 
     def _aggregate_career(self, season_df: pd.DataFrame) -> pd.DataFrame:
-        """Aggregate season-level rows to career-level per Manager."""
+        """Aggregate season-level rows to career-level per manager."""
         if season_df.empty:
             return season_df.copy()
 
         present = set(season_df.columns)
-        group_keys = ["Manager"]
+        group_keys = ["manager"]
 
         # Sums across seasons (per requirement)
         sum_cols = [c for c in [

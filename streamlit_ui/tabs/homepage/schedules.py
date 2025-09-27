@@ -16,7 +16,7 @@ class SeasonStandingsViewer:
             aggregation_type = st.toggle("Per Game", value=False, key=f"{prefix}_aggregation_type")
             aggregation_func = 'mean' if aggregation_type else 'sum'
 
-            aggregated_df = df.groupby(['Manager', 'year']).agg({
+            aggregated_df = df.groupby(['manager', 'year']).agg({
                 'team_points': aggregation_func,
                 'opponent_score': aggregation_func,
                 'win': aggregation_func,
@@ -25,22 +25,22 @@ class SeasonStandingsViewer:
                 'quarterfinal': aggregation_func,
                 'semifinal': aggregation_func,
                 'championship': aggregation_func,
-                'Champion': aggregation_func
+                'champion': aggregation_func
             }).reset_index()
 
             aggregated_df['year'] = aggregated_df['year'].astype(str)
-            managers = sorted(aggregated_df['Manager'].unique())
+            managers = sorted(aggregated_df['manager'].unique())
             col1, col2 = st.columns(2)
             with col1:
                 selected_manager = st.selectbox("Select Manager", managers, index=0, key=f"{prefix}_manager")
             with col2:
-                years_for_manager = sorted(aggregated_df[aggregated_df['Manager'] == selected_manager]['year'].unique())
+                years_for_manager = sorted(aggregated_df[aggregated_df['manager'] == selected_manager]['year'].unique())
                 selected_year = st.selectbox("Select Year", years_for_manager, index=len(years_for_manager)-1, key=f"{prefix}_year")
 
             st.subheader(f"Schedule for {selected_manager} ({selected_year})")
 
             week_df = df[
-                (df['year'].astype(str) == str(selected_year)) & (df['Manager'] == selected_manager)
+                (df['year'].astype(str) == str(selected_year)) & (df['manager'] == selected_manager)
             ].copy()
 
             def make_table(filtered_df, title):

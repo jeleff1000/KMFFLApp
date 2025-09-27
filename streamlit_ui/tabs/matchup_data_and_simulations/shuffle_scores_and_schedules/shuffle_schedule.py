@@ -3,7 +3,7 @@ import numpy as np
 
 def shuffle_schedule(df):
     # Get unique managers and weeks
-    managers = df['Manager'].unique()
+    managers = df['manager'].unique()
     weeks = df['week'].unique()
 
     # Create a round-robin schedule
@@ -36,15 +36,15 @@ def shuffle_schedule(df):
 
     # Update Sim_Wins and Sim_Losses based on the new schedule
     for week, manager1, manager2 in final_schedule:
-        team1_points = df[(df['Manager'] == manager1) & (df['week'] == week)]['team_points'].values
-        team2_points = df[(df['Manager'] == manager2) & (df['week'] == week)]['team_points'].values
+        team1_points = df[(df['manager'] == manager1) & (df['week'] == week)]['team_points'].values
+        team2_points = df[(df['manager'] == manager2) & (df['week'] == week)]['team_points'].values
 
         if len(team1_points) > 0 and len(team2_points) > 0:
             if team1_points[0] > team2_points[0]:
-                df.loc[(df['Manager'] == manager1) & (df['week'] == week), 'Sim_Wins'] += 1
-                df.loc[(df['Manager'] == manager2) & (df['week'] == week), 'Sim_Losses'] += 1
+                df.loc[(df['manager'] == manager1) & (df['week'] == week), 'Sim_Wins'] += 1
+                df.loc[(df['manager'] == manager2) & (df['week'] == week), 'Sim_Losses'] += 1
             elif team1_points[0] < team2_points[0]:
-                df.loc[(df['Manager'] == manager1) & (df['week'] == week), 'Sim_Losses'] += 1
-                df.loc[(df['Manager'] == manager2) & (df['week'] == week), 'Sim_Wins'] += 1
+                df.loc[(df['manager'] == manager1) & (df['week'] == week), 'Sim_Losses'] += 1
+                df.loc[(df['manager'] == manager2) & (df['week'] == week), 'Sim_Wins'] += 1
 
     return df

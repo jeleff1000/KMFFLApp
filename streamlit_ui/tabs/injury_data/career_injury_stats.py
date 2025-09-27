@@ -8,18 +8,18 @@ class CareerInjuryStatsViewer:
     def display(self, merged_data):
         st.header("Career Injury Stats")
 
-        # Ensure all values in the player, position_y, owner, and report_status columns are strings
+        # Ensure all values in the player, position_y, manager, and report_status columns are strings
         merged_data["player"] = merged_data["player"].astype(str)
         merged_data["position_y"] = merged_data["position_y"].astype(str)
-        merged_data["owner"] = merged_data["owner"].astype(str)
+        merged_data["manager"] = merged_data["manager"].astype(str)
         merged_data["report_status"] = merged_data["report_status"].astype(str)
 
-        # Create columns for player and owner search bars
+        # Create columns for player and manager search bars
         col1, col2 = st.columns(2)
         with col1:
             players = st.multiselect("Search by Player", options=sorted(merged_data["player"].unique()), key="career_player_multiselect")
         with col2:
-            owner_search = st.text_input("Search by Owner", key="career_owner_search")
+            manager_search = st.text_input("Search by manager", key="career_manager_search")
 
         # Create columns for report status dropdown
         report_statuses = sorted(merged_data["report_status"].unique())
@@ -28,7 +28,7 @@ class CareerInjuryStatsViewer:
         # Filter the dataframe based on the search inputs
         filtered_data = merged_data[
             (merged_data["player"].isin(players) if players else merged_data["player"].notna()) &
-            (merged_data["owner"].str.contains(owner_search, case=False) if owner_search else merged_data["owner"].notna()) &
+            (merged_data["manager"].str.contains(manager_search, case=False) if manager_search else merged_data["manager"].notna()) &
             ((merged_data["report_status"].isin(report_status)) if report_status and "All" not in report_status else merged_data["report_status"].notna())
         ]
 

@@ -78,14 +78,14 @@ class TweakScoringViewer(WeeklyMatchupDataViewer):
                     filtered_df['Sim_Playoff_Seed'] = np.nan
 
                 # Aggregate data at the season-long level
-                aggregated_df = filtered_df.groupby(['year', 'Manager']).agg(
+                aggregated_df = filtered_df.groupby(['year', 'manager']).agg(
                     Points=('team_points', 'sum'),
                     Sim_Points=('tweaked_team_points', 'sum'),
                     Sim_W=('Sim_Wins', 'sum'),
                     Sim_L=('Sim_Losses', 'sum'),
                     Wins=('win', 'sum'),
                     Losses=('loss', 'sum'),
-                    Seed=('Final Playoff Seed', 'max'),
+                    Seed=('final_playoff_seed', 'max'),
                     Sim_Seed=('Sim_Playoff_Seed', 'max')
                 ).reset_index()
 
@@ -97,11 +97,11 @@ class TweakScoringViewer(WeeklyMatchupDataViewer):
 
                 # Columns to display
                 data_columns = [
-                    'Manager', 'Seed', 'Wins', 'Losses', 'Points'
+                    'manager', 'Seed', 'Wins', 'Losses', 'Points'
                 ]
 
                 sim_columns = [
-                    'Manager', 'Sim_Seed', 'Sim_W', 'Sim_L', 'Sim_Points'
+                    'manager', 'Sim_Seed', 'Sim_W', 'Sim_L', 'Sim_Points'
                 ]
 
                 if selected_year == "All Years":

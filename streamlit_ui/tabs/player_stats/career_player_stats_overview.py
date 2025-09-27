@@ -38,37 +38,37 @@ class StreamlitCareerPlayerDataViewer:
         def display_filters(tab_index, tab_name):
             selected_filters = {}
 
-            # First row: Player search bar, Owner dropdown, and Rostered toggle
+            # First row: Player search bar, manager dropdown, and Rostered toggle
             col1, col2, col3 = st.columns([2, 1, 1])
             with col1:
                 player_search = st.text_input("Search Player", key=f"player_search_{tab_name}_{str(tab_index)}_col1")
             with col2:
-                owner_values = st.multiselect("Select Owner", self.get_unique_values("owner", selected_filters),
-                                              key=f"owner_value_{tab_name}_{str(tab_index)}_col2")
+                manager_values = st.multiselect("Select manager", self.get_unique_values("manager", selected_filters),
+                                              key=f"manager_value_{tab_name}_{str(tab_index)}_col2")
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_name}_{str(tab_index)}_col3")
             if player_search:
                 selected_filters["player"] = [player for player in self.player_data['player'].unique() if
                                               player_search.lower() in player.lower()]
-            selected_filters["owner"] = owner_values
+            selected_filters["manager"] = manager_values
 
-            # Filter out players with "No Owner" if toggle is on
+            # Filter out players with "No manager" if toggle is on
             if show_rostered:
-                selected_filters["owner"] = [owner for owner in selected_filters["owner"] if owner != "No Owner"]
-                if not selected_filters["owner"]:
-                    selected_filters["owner"] = [owner for owner in self.get_unique_values("owner", selected_filters) if
-                                                 owner != "No Owner"]
+                selected_filters["manager"] = [manager for manager in selected_filters["manager"] if manager != "No manager"]
+                if not selected_filters["manager"]:
+                    selected_filters["manager"] = [manager for manager in self.get_unique_values("manager", selected_filters) if
+                                                 manager != "No manager"]
 
-            # Second row: Position, Fantasy Position filters, Started toggle, and Per Game toggle
+            # Second row: Position, fantasy_position filters, Started toggle, and Per Game toggle
             col1, col2, col3, col4 = st.columns([1, 1, 0.5, 0.5])
             with col1:
                 position_values = st.multiselect("Select Position",
                                                  self.get_unique_values("position", selected_filters),
                                                  key=f"position_value_{tab_name}_{str(tab_index)}_col1")
             with col2:
-                fantasy_position_values = st.multiselect("Select Fantasy Position",
-                                                         self.get_unique_values("fantasy position", selected_filters),
+                fantasy_position_values = st.multiselect("Select fantasy_position",
+                                                         self.get_unique_values("fantasy_position", selected_filters),
                                                          key=f"fantasy_position_value_{tab_name}_{str(tab_index)}_col2")
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
@@ -77,32 +77,32 @@ class StreamlitCareerPlayerDataViewer:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_per_game = st.toggle("Per Game", value=False, key=f"show_per_game_{tab_name}_{str(tab_index)}_col4")
             selected_filters["position"] = position_values
-            selected_filters["fantasy position"] = fantasy_position_values
+            selected_filters["fantasy_position"] = fantasy_position_values
 
-            # Filter out players with fantasy position BN or IR if toggle is on
+            # Filter out players with fantasy_position BN or IR if toggle is on
             if show_started:
-                selected_filters["fantasy position"] = [pos for pos in selected_filters["fantasy position"] if
+                selected_filters["fantasy_position"] = [pos for pos in selected_filters["fantasy_position"] if
                                                         pos not in ["BN", "IR"]]
-                if not selected_filters["fantasy position"]:
-                    selected_filters["fantasy position"] = [pos for pos in
-                                                            self.get_unique_values("fantasy position", selected_filters)
+                if not selected_filters["fantasy_position"]:
+                    selected_filters["fantasy_position"] = [pos for pos in
+                                                            self.get_unique_values("fantasy_position", selected_filters)
                                                             if pos not in ["BN", "IR"]]
 
-            # Third row: Team, Opponent Team, Year filters
+            # Third row: Team, opponent_team, Year filters
             col1, col2, col3 = st.columns(3)
             with col1:
                 team_values = st.multiselect("Select Team", self.get_unique_values("team", selected_filters),
                                              key=f"team_value_{tab_name}_{str(tab_index)}_col1")
             with col2:
-                opponent_team_values = st.multiselect("Select Opponent Team",
+                opponent_team_values = st.multiselect("Select opponent_team",
                                                       self.get_unique_values("opponent_team", selected_filters),
                                                       key=f"opponent_team_value_{tab_name}_{str(tab_index)}_col2")
             with col3:
-                year_values = st.multiselect("Select Year", self.get_unique_values("season", selected_filters),
+                year_values = st.multiselect("Select Year", self.get_unique_values("year", selected_filters),
                                              key=f"year_value_{tab_name}_{str(tab_index)}_col3")
             selected_filters["team"] = team_values
-            selected_filters["opponent team"] = opponent_team_values
-            selected_filters["season"] = year_values
+            selected_filters["opponent_team"] = opponent_team_values
+            selected_filters["year"] = year_values
 
             return selected_filters, show_per_game
 
@@ -150,7 +150,7 @@ class StreamlitCareerPlayerDataViewer:
 
         # Ensure numeric columns are converted to float before division
         numeric_columns = [col for col in stats_df.columns if
-                           col not in ['player', 'team', 'season', 'owner', 'position', 'unique_weeks']]
+                           col not in ['player', 'team', 'year', 'manager', 'position', 'unique_weeks']]
         stats_df[numeric_columns] = stats_df[numeric_columns].apply(pd.to_numeric, errors='coerce')
 
         # Divide all the stats by the number of unique weeks

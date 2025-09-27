@@ -7,12 +7,12 @@ class SeasonAdvancedStatsViewer:
     def display(self, prefix=""):
         st.header("Season Advanced Stats")
         required_columns = [
-            'Manager', 'opponent', 'week', 'year', 'team_points', 'opponent_score', 'win',
+            'manager', 'opponent', 'week', 'year', 'team_points', 'opponent_score', 'win',
             'margin', 'total_matchup_score', 'teams_beat_this_week', 'opponent_teams_beat_this_week',
-            'close_margin', 'above_league_median', 'below_league_median', 'Above Opponent Median',
-            'Below Opponent Median', 'GPA', 'League-Wide Season Mean', 'League-Wide Season Median',
-            'Personal Season Mean', 'Personal Season Median', 'Winning Streak', 'Losing Streak',
-            'Real Score', 'Real Opponent Score', 'Real Margin', 'Real Total Matchup Score'
+            'close_margin', 'above_league_median', 'below_league_median', 'above_opponent_median',
+            'below_opponent_median', 'gpa', 'league_weekly_mean', 'league_weekly_median',
+            'personal_season_mean', 'personal_season_median', 'winning_streak', 'losing_streak',
+            'real_score', 'real_opponent_score', 'real_margin', 'real_total_matchup_score'
         ]
 
         available_columns = self.df.columns.tolist()
@@ -27,7 +27,7 @@ class SeasonAdvancedStatsViewer:
             aggregation_type = st.toggle("Per Game", value=False, key=f"{prefix}_aggregation_type")
             aggregation_func = 'mean' if aggregation_type else 'sum'
 
-            aggregated_df = self.df.groupby(['Manager', 'year']).agg({
+            aggregated_df = self.df.groupby(['manager', 'year']).agg({
                 'team_points': aggregation_func,
                 'opponent_score': aggregation_func,
                 'win': aggregation_func,
@@ -39,30 +39,30 @@ class SeasonAdvancedStatsViewer:
                 'close_margin': aggregation_func,
                 'above_league_median': aggregation_func,
                 'below_league_median': aggregation_func,
-                'Above Opponent Median': aggregation_func,
-                'Below Opponent Median': aggregation_func,
-                'GPA': 'mean',
-                'League-Wide Season Mean': 'mean',
-                'League-Wide Season Median': 'median',
-                'Personal Season Mean': 'mean',
-                'Personal Season Median': 'median',
-                'Winning Streak': 'max',
-                'Losing Streak': 'max',
-                'Real Score': aggregation_func,
-                'Real Opponent Score': aggregation_func,
-                'Real Margin': aggregation_func,
-                'Real Total Matchup Score': aggregation_func
+                'above_opponent_median': aggregation_func,
+                'below_opponent_median': aggregation_func,
+                'gpa': 'mean',
+                'league_weekly_mean': 'mean',
+                'league_weekly_median': 'median',
+                'personal_season_mean': 'mean',
+                'personal_season_median': 'median',
+                'winning_streak': 'max',
+                'losing_streak': 'max',
+                'real_score': aggregation_func,
+                'real_opponent_score': aggregation_func,
+                'real_margin': aggregation_func,
+                'real_total_matchup_score': aggregation_func
             }).reset_index()
 
             if aggregation_type:
                 columns_to_round_2 = [
                     'team_points', 'opponent_score', 'margin', 'total_matchup_score', 'teams_beat_this_week',
-                    'opponent_teams_beat_this_week', 'GPA', 'Real Score', 'Real Opponent Score', 'Real Margin',
-                    'Real Total Matchup Score'
+                    'opponent_teams_beat_this_week', 'gpa', 'real_score', 'real_opponent_score', 'real_margin',
+                    'real_total_matchup_score'
                 ]
                 columns_to_round_3 = [
-                    'close_margin', 'above_league_median', 'below_league_median', 'Above Opponent Median',
-                    'Below Opponent Median'
+                    'close_margin', 'above_league_median', 'below_league_median', 'above_opponent_median',
+                    'below_opponent_median'
                 ]
                 aggregated_df[columns_to_round_2] = aggregated_df[columns_to_round_2].round(2)
                 aggregated_df[columns_to_round_3] = aggregated_df[columns_to_round_3].round(3)
@@ -71,16 +71,16 @@ class SeasonAdvancedStatsViewer:
 
             aggregated_df['year'] = aggregated_df['year'].astype(str)
 
-            display_df = aggregated_df.sort_values(by=['Manager', 'year']).reset_index(drop=True)
+            display_df = aggregated_df.sort_values(by=['manager', 'year']).reset_index(drop=True)
 
-            # Round specified columns to 2 digits
             columns_to_round = [
-                'League-Wide Season Mean', 'League-Wide Season Median', 'Personal Season Mean',
-                'Personal Season Median', 'GPA'
+                'league_weekly_mean', 'league_weekly_median', 'personal_season_mean',
+                'personal_season_median', 'gpa'
             ]
             display_df[columns_to_round] = display_df[columns_to_round].round(2)
 
             display_df = display_df.rename(columns={
+                'manager': 'Manager',
                 'year': 'Year',
                 'win': 'W',
                 'loss': 'L',
@@ -92,20 +92,20 @@ class SeasonAdvancedStatsViewer:
                 'opponent_teams_beat_this_week': 'Opp W Vs Every Tm',
                 'close_margin': 'Close Margin',
                 'above_league_median': 'Above Lg Mean',
-                'below_league_median': 'Above Lg Median',
-                'Above Opponent Median': 'Above Opp Median',
-                'Below Opponent Median': 'Below Opp Median',
-                'GPA': 'GPA',
-                'League-Wide Season Mean': 'League-Wide Season Mean',
-                'League-Wide Season Median': 'League-Wide Season Median',
-                'Personal Season Mean': 'Team Mean',
-                'Personal Season Median': 'Team Median',
-                'Winning Streak': 'Winning Streak',
-                'Losing Streak': 'Losing Streak',
-                'Real Score': 'Real Points',
-                'Real Opponent Score': 'Real Opp score',
-                'Real Margin': 'Real Margin',
-                'Real Total Matchup Score': 'Real Matchup Score'
+                'below_league_median': 'Below Lg Median',
+                'above_opponent_median': 'Above Opp Median',
+                'below_opponent_median': 'Below Opp Median',
+                'gpa': 'GPA',
+                'league_weekly_mean': 'League-Wide Season Mean',
+                'league_weekly_median': 'League-Wide Season Median',
+                'personal_season_mean': 'Team Mean',
+                'personal_season_median': 'Team Median',
+                'winning_streak': 'Winning Streak',
+                'losing_streak': 'Losing Streak',
+                'real_score': 'Real Points',
+                'real_opponent_score': 'Real Opp score',
+                'real_margin': 'Real Margin',
+                'real_total_matchup_score': 'Real Matchup Score'
             })
 
             st.dataframe(display_df, hide_index=True)

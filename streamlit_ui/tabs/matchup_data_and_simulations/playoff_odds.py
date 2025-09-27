@@ -28,7 +28,7 @@ class PlayoffOddsViewer:
         odds = reg_season_raw[reg_season_raw["week"] == week].copy()
 
         odds_cols = [
-            "avg_seed", "Manager", "p_playoffs", "p_bye", "exp_final_wins",
+            "avg_seed", "manager", "p_playoffs", "p_bye", "exp_final_wins",
             "exp_final_pf", "p_semis", "p_final", "p_champ"
         ]
         odds_table = odds[odds_cols].sort_values("avg_seed", ascending=True).reset_index(drop=True)

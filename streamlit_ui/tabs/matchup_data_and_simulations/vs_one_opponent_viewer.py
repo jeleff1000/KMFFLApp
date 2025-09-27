@@ -1,36 +1,33 @@
 import streamlit as st
 import pandas as pd
-from .matchups.weekly.weekly_matchup_overview import WeeklyMatchupDataViewer
+import re
 
-class VsOneOpponentViewer(WeeklyMatchupDataViewer):
-    def __init__(self, matchup_data_df, player_data_df):
-        super().__init__(matchup_data_df, player_data_df)
-        self.df = matchup_data_df
+class VsOneOpponentViewer:
+    def __init__(self, df):
+        self.df = df
 
     def display(self):
         st.subheader("Vs. One Opponent Simulation")
 
-        # Add dropdown for selecting year with left-aligned narrower width
+        # Year and season filters
         col1, col2, col3, col4 = st.columns([1, 3, 1, 1])
         with col1:
             years = ["All"] + sorted(self.df['year'].astype(int).unique().tolist())
-            default_year = max(years[1:])  # Set default to the largest year
+            default_year = max(years[1:])
             selected_year = st.selectbox("Select Year", years, index=years.index(default_year), key="vs_one_opponent_year_dropdown")
 
-        # Add checkboxes for including Regular Season and Postseason on the same line
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             include_regular_season = st.checkbox("Include Regular Season", value=True, key="include_regular_season")
         with col2:
             include_postseason = st.checkbox("Include Postseason", value=False, key="include_postseason")
 
-        # Filter data based on selected year
+        # Filter data
         if selected_year != "All":
             filtered_df = self.df[self.df['year'] == int(selected_year)]
         else:
             filtered_df = self.df
 
-        # Filter data based on checkboxes
         if include_regular_season:
             regular_season_df = filtered_df[(filtered_df['is_playoffs'] == 0) & (filtered_df['is_consolation'] == 0)]
         else:
@@ -43,39 +40,34 @@ class VsOneOpponentViewer(WeeklyMatchupDataViewer):
 
         filtered_df = pd.concat([regular_season_df, postseason_df])
 
-        # List of opponents with original names
-        opponents = {
-            "Adin": "Adin",
-            "Daniel": "Daniel",
-            "Eleff": "Eleff",
-            "Gavi": "Gavi",
-            "Jesse": "Jesse",
-            "Kardon": "Kardon",
-            "Leeb": "Leeb",
-            "Newman": "Newman",
-            "Tani": "Tani",
-            "Yaacov": "Yaacov"
-        }
+        # Dynamically find all opponent suffixes, excluding *_SCHED (case-insensitive)
+        win_cols = [col for col in filtered_df.columns if re.match(r'w_vs_', col, re.IGNORECASE)]
+        suffixes = [col[5:] for col in win_cols]
+        suffixes = [
+            s for s in suffixes
+            if f'l_vs_{s}' in filtered_df.columns and not s.lower().endswith('_sched')
+        ]
 
-        # Group by Manager and aggregate the results
-        result_df = filtered_df.groupby('Manager').sum().reset_index()
+        # Group by manager and sum
+        result_df = filtered_df.groupby('manager').sum(numeric_only=True).reset_index()
 
-        # Combine win and loss columns for each opponent
-        for original, updated in opponents.items():
-            result_df[f"Vs<br>{updated}"] = result_df[f"W vs {original}"].astype(int).astype(str) + "-" + result_df[f"L vs {original}"].astype(int).astype(str)
-            result_df = result_df.drop(columns=[f"W vs {original}", f"L vs {original}"])
+        # Combine win/loss columns for each opponent
+        for suffix in suffixes:
+            win_col = f'w_vs_{suffix}'
+            loss_col = f'l_vs_{suffix}'
+            display_col = f"Vs {suffix.title()}"
+            result_df[display_col] = result_df[win_col].astype(int).astype(str) + "-" + result_df[loss_col].astype(int).astype(str)
+            result_df = result_df.drop(columns=[win_col, loss_col])
 
-        # Keep only the combined "Vs" columns
-        result_df = result_df[['Manager'] + [f"Vs<br>{updated}" for updated in opponents.values()]]
+        # Keep only manager and combined columns
+        display_cols = ['manager'] + [f"Vs {s.title()}" for s in suffixes]
+        result_df = result_df[display_cols]
 
-        # Display the result with HTML column names and without index
         st.markdown(result_df.to_html(index=False, escape=False), unsafe_allow_html=True)
 
-        # Create a second table showing win-loss for each manager
-        win_loss_df = filtered_df.groupby('Manager').agg({'win': 'sum', 'loss': 'sum'}).reset_index()
+        # Win-loss table
+        win_loss_df = filtered_df.groupby('manager').agg({'win': 'sum', 'loss': 'sum'}).reset_index()
         win_loss_df['Win-Loss'] = win_loss_df['win'].astype(int).astype(str) + "-" + win_loss_df['loss'].astype(int).astype(str)
-        win_loss_df = win_loss_df.set_index('Manager')
-
-        # Display the win-loss table
-        st.subheader("Win-Loss Record for Each Manager")
+        win_loss_df = win_loss_df.set_index('manager')
+        st.subheader("Win-Loss Record for Each manager")
         st.dataframe(win_loss_df[['Win-Loss']])

@@ -3,20 +3,20 @@ import streamlit as st
 
 def display_weekly_optimal_lineup(matchup_df, player_df):
     # Merge player_df and matchup_df at the beginning
-    merged_df = pd.merge(player_df, matchup_df, left_on=['owner', 'week', 'season', 'opponent'], right_on=['Manager', 'week', 'year', 'opponent'], how='left')
+    merged_df = pd.merge(player_df, matchup_df, left_on=['manager', 'week', 'year', 'opponent'], right_on=['manager', 'week', 'year', 'opponent'], how='left')
 
-    # Remove rows where Manager is None
-    merged_df = merged_df[merged_df['Manager'].notna()]
+    # Remove rows where manager is None
+    merged_df = merged_df[merged_df['manager'].notna()]
 
     # Keep only the specified columns
-    columns_to_keep = ['Manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_score', 'points', 'optimal_player', 'fantasy position', 'is_playoffs', 'is_consolation']
+    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_score', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
     filtered_df = merged_df[columns_to_keep]
 
     # Create a new column that sums the points when optimal_player is 1
-    filtered_df['optimal_points_sum'] = filtered_df[filtered_df['optimal_player'] == 1].groupby(['Manager', 'week', 'year'])['points'].transform('sum')
+    filtered_df['optimal_points_sum'] = filtered_df[filtered_df['optimal_player'] == 1].groupby(['manager', 'week', 'year'])['points'].transform('sum')
 
-    # Aggregate the data on Manager, week, and year
-    aggregated_df = filtered_df.groupby(['Manager', 'week', 'year', 'opponent']).agg({
+    # Aggregate the data on manager, week, and year
+    aggregated_df = filtered_df.groupby(['manager', 'week', 'year', 'opponent']).agg({
         'team_points': 'first',
         'win': 'first',
         'loss': 'first',
@@ -28,8 +28,8 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
     }).reset_index()
 
     # Self-join to get opponent's optimal_points_sum
-    opponent_optimal_df = aggregated_df[['Manager', 'week', 'year', 'optimal_points_sum']].rename(columns={
-        'Manager': 'opponent',
+    opponent_optimal_df = aggregated_df[['manager', 'week', 'year', 'optimal_points_sum']].rename(columns={
+        'manager': 'opponent',
         'optimal_points_sum': 'opponent_optimal'
     })
     aggregated_df = pd.merge(
@@ -58,7 +58,7 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
     aggregated_df['lost_points'] = aggregated_df['optimal_points'] - aggregated_df['team_points']
 
     # Reorder columns
-    aggregated_df = aggregated_df[['Manager', 'week', 'year', 'opponent', 'team_points', 'optimal_points', 'lost_points', 'win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_score', 'opponent_optimal']]
+    aggregated_df = aggregated_df[['manager', 'week', 'year', 'opponent', 'team_points', 'optimal_points', 'lost_points', 'win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_score', 'opponent_optimal']]
 
     # Rename columns
     aggregated_df = aggregated_df.rename(columns={

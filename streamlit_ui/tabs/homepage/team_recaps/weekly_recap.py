@@ -4,7 +4,6 @@ import re
 import pandas as pd
 import streamlit as st
 
-# --- Units and adjectives we consider as number "units" to bold ---
 _UNIT_WORDS = (
     "point", "points", "win", "wins", "seed", "seeds",
     "chance", "favorite", "favorites", "spread", "margin",
@@ -12,12 +11,11 @@ _UNIT_WORDS = (
 )
 _ADJ_WORDS = ("extra", "total", "more", "fewer", "additional")
 
-# number with optional %, then optional adjective, then a required unit
 _RE_NUM_UNIT = re.compile(
     rf"(?<!\w)("
-    rf"(?:\d{{1,3}}(?:,\d{{3}})*|\d+)(?:\.\d+)?%?"           # number (opt decimal) (opt %)
-    rf"(?:\s+(?:{'|'.join(_ADJ_WORDS)}))?"                   # optional adjective
-    rf"(?:\s+(?:{'|'.join(_UNIT_WORDS)}))"                   # required unit
+    rf"(?:\d{{1,3}}(?:,\d{{3}})*|\d+)(?:\.\d+)?%?"
+    rf"(?:\s+(?:{'|'.join(_ADJ_WORDS)}))?"
+    rf"(?:\s+(?:{'|'.join(_UNIT_WORDS)}))"
     rf")(?!\w)",
     re.IGNORECASE
 )
@@ -34,7 +32,6 @@ def _as_dataframe(obj: Any) -> Optional[pd.DataFrame]:
         return None
     return None
 
-
 def _get_matchup_df(df_dict: Optional[Dict[Any, Any]]) -> Optional[pd.DataFrame]:
     if not isinstance(df_dict, dict):
         return None
@@ -45,10 +42,8 @@ def _get_matchup_df(df_dict: Optional[Dict[Any, Any]]) -> Optional[pd.DataFrame]
             return _as_dataframe(v)
     return None
 
-
 def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", str(s).lower().strip())
-
 
 def _find_col(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
     norm_map = {_norm(c): c for c in df.columns}
@@ -57,7 +52,6 @@ def _find_col(df: pd.DataFrame, candidates: list[str]) -> Optional[str]:
         if key in norm_map:
             return norm_map[key]
     return None
-
 
 def _find_manager_column(df: pd.DataFrame) -> Optional[str]:
     preferred = [
@@ -73,7 +67,6 @@ def _find_manager_column(df: pd.DataFrame) -> Optional[str]:
             return original
     return None
 
-
 def _val(row: pd.Series, col: Optional[str], default=None):
     if not col:
         return default
@@ -85,7 +78,6 @@ def _val(row: pd.Series, col: Optional[str], default=None):
     except Exception:
         return default
 
-
 def _to_int(v, default=None) -> Optional[int]:
     try:
         if v is None or (isinstance(v, float) and pd.isna(v)):
@@ -94,7 +86,6 @@ def _to_int(v, default=None) -> Optional[int]:
     except Exception:
         return default
 
-
 def _to_float(v, default=None) -> Optional[float]:
     try:
         if v is None or (isinstance(v, float) and pd.isna(v)):
@@ -102,7 +93,6 @@ def _to_float(v, default=None) -> Optional[float]:
         return float(v)
     except Exception:
         return default
-
 
 def _flag(v) -> Optional[int]:
     if v is None or (isinstance(v, float) and pd.isna(v)):
@@ -122,20 +112,17 @@ def _flag(v) -> Optional[int]:
         return 0
     return None
 
-
 def _fmt_points(v) -> str:
     f = _to_float(v, None)
     if f is None:
         return "N/A"
     return f"{f:.1f}".rstrip("0").rstrip(".")
 
-
 def _fmt_number(v) -> str:
     f = _to_float(v, None)
     if f is None:
         return "N/A"
     return f"{f:.2f}".rstrip("0").rstrip(".")
-
 
 def _fmt_percent(v) -> str:
     f = _to_float(v, None)
@@ -144,13 +131,11 @@ def _fmt_percent(v) -> str:
     pct = f * 100.0 if 0.0 <= f <= 1.0 else f
     return f"{pct:.1f}%".replace(".0%", "%")
 
-
 def _fmt_abs_number(v) -> str:
     f = _to_float(v, None)
     if f is None:
         return "N/A"
     return _fmt_number(abs(f))
-
 
 def _combo_projection_message(
     row: pd.Series,
@@ -192,12 +177,10 @@ def _combo_projection_message(
     proj_err_pos_str = _fmt_number(abs(proj_err)) if proj_err is not None else "N/A"
     abs_proj_err_str = _fmt_number(abs(abs_proj_err)) if abs_proj_err is not None else "N/A"
 
-    # --- helpers to bold content and units ---
     def b(s: str) -> str:
         return f"**{_escape_md_text(s)}**"
 
     def pts(value_str: str, value_num: Optional[float]) -> str:
-        # add bold "point/points" with correct plurality
         unit = "point" if (value_num is not None and abs(value_num) == 1) else "points"
         return f"{b(value_str)} {b(unit)}"
 
@@ -278,22 +261,16 @@ def _combo_projection_message(
 
     return None
 
-
 def _escape_md_text(s: str) -> str:
-    # Escape Markdown special chars so content inside bold stays literal
     return re.sub(r"([\\`*_~\-])", r"\\\1", str(s or ""))
 
-
 def _bold_parentheticals(s: str) -> str:
-    # Make any (...) segment bold, including the parentheses
     def repl(m: re.Match) -> str:
         inner = _escape_md_text(m.group(1))
         return f"**{inner}**"
     return re.sub(r"\(([^()]*)\)", repl, str(s or ""))
 
-
 def _bold_numbers_with_units(s: str) -> str:
-    # Bold number+unit phrases outside parentheses to avoid nested bold
     def bold_nums_segment(seg: str) -> str:
         def repl(m: re.Match) -> str:
             return f"**{_escape_md_text(m.group(1))}**"
@@ -322,11 +299,8 @@ def _bold_numbers_with_units(s: str) -> str:
         out.append(bold_nums_segment("".join(buf)))
     return "".join(out)
 
-
 def _apply_bolding(s: str) -> str:
-    # Bold number+units outside parentheses, then bold entire parentheticals
     return _bold_parentheticals(_bold_numbers_with_units(s))
-
 
 def display_weekly_recap(
     df_dict: Optional[Dict[Any, Any]] = None,
@@ -335,9 +309,6 @@ def display_weekly_recap(
     week: int,
     manager: str,
 ) -> None:
-    """
-    Text-only weekly recap. Assumes selection is handled by the caller.
-    """
     matchup_df = _get_matchup_df(df_dict)
     if matchup_df is None:
         st.info("No `Matchup Data` dataset available.")
@@ -345,16 +316,16 @@ def display_weekly_recap(
 
     df = matchup_df.copy()
 
-    col_year = _find_col(df, ["year"])
-    col_week = _find_col(df, ["week"])
+    col_year = _find_col(df, ["manager_year"])
+    col_week = _find_col(df, ["manager_week"])
     col_manager = _find_manager_column(df)
 
     col_opponent = _find_col(df, ["opponent", "opponent_team", "opp"])
     col_team_points = _find_col(df, ["team_points", "team score", "score", "points_for", "points for"])
     col_opponent_score = _find_col(df, ["opponent score", "opponent_score", "opp_points", "points_against", "points against", "opp score"])
 
-    col_weekly_mean = _find_col(df, ["weekly_mean", "week_mean", "league_week_mean"])
-    col_weekly_median = _find_col(df, ["weekly_median", "week_median", "league_week_median"])
+    col_weekly_mean = _find_col(df, ["league_weekly_mean"])
+    col_weekly_median = _find_col(df, ["league_weekly_median"])
     col_teams_beat = _find_col(df, ["teams_beat_this_week", "teams beat this week", "would_beat"])
 
     col_is_playoffs = _find_col(df, ["is_playoffs", "is playoffs", "is_playoff", "playoffs", "postseason", "is_postseason"])
@@ -363,15 +334,15 @@ def display_weekly_recap(
 
     col_above_league_median = _find_col(df, ["above_league_median", "above league median", "above_median", "above median"])
 
-    col_above_proj = _find_col(df, ["Above Projected Score", "above_projected_score", "above projected score", "above_proj", "above proj"])
-    col_projected_wins = _find_col(df, ["Projected Wins", "projected_wins", "is_favored", "favored", "favorite"])
-    col_win_ats = _find_col(df, ["Win Matchup Against the Spread", "win_matchup_against_the_spread", "win_ats", "covered", "cover", "beat_spread"])
+    col_above_proj = _find_col(df, ["above_proj_score"])
+    col_projected_wins = _find_col(df, ["projected_wins", "is_favored", "favored", "favorite"])
+    col_win_ats = _find_col(df, ["win_vs_spread", "win_matchup_against_the_spread", "win_ats", "covered", "cover", "beat_spread"])
 
-    col_expected_odds = _find_col(df, ["Expected Odds", "expected_odds", "win_probability", "proj_win_prob", "odds"])
-    col_expected_spread = _find_col(df, ["Expected Spread", "expected_spread", "proj_spread", "spread"])
+    col_expected_odds = _find_col(df, ["expected_odds", "win_probability", "proj_win_prob", "odds"])
+    col_expected_spread = _find_col(df, ["expected_spread", "proj_spread", "spread"])
     col_margin = _find_col(df, ["margin", "score_margin", "point_diff", "points_diff", "margin_of_victory"])
-    col_proj_score_err = _find_col(df, ["Projected Score Error", "projected_score_error", "proj_score_error", "projection_error"])
-    col_abs_proj_score_err = _find_col(df, ["Absolute Value Projected Score Error", "absolute value projected score error", "abs_projected_score_error", "abs proj score error"])
+    col_proj_score_err = _find_col(df, ["proj_score_error", "projected_score_error", "projection_error"])
+    col_abs_proj_score_err = _find_col(df, ["abs_proj_score_error", "absolute value projected score error", "abs_projected_score_error", "abs proj score error"])
 
     if col_year:
         df = df[pd.to_numeric(df[col_year], errors="coerce").astype("Int64") == year]
@@ -421,7 +392,6 @@ def display_weekly_recap(
         final_line += f" {scenario_msg}"
     st.markdown(_apply_bolding(final_line))
 
-    # Include "points" so both number and unit are bold via parenthetical rule
     mean_line = f"The average score this week was ({_fmt_number(weekly_mean)} points)."
 
     luck_msg = None
@@ -451,7 +421,6 @@ def display_weekly_recap(
                 elif did_win and abl_flag == 1:
                     luck_msg = f"You deserved this win! You would have beaten {tb_bold} {unit} this week!"
         else:
-            # Fallback if teams_beat is unavailable
             if did_win and abl_flag == 0:
                 luck_msg = "Lucky win! You were outscored by over half the league and still won!"
             elif (not did_win) and abl_flag == 0:

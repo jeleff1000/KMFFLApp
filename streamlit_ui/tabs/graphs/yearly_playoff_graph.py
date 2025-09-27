@@ -23,10 +23,10 @@ class PlayoffOddsCumulativeViewer:
             st.info("No data available.")
             return
 
-        # Use source 'Cumulative Week' column directly (fallback to 'cum_week')
-        cw_col = "Cumulative Week" if "Cumulative Week" in df.columns else "cum_week"
+        # Use mapped column name for cumulative week
+        cw_col = "cumulative_week" if "cumulative_week" in df.columns else "cum_week"
         if cw_col not in df.columns:
-            st.error("Required column 'Cumulative Week' not found in data.")
+            st.error("Required column 'cumulative_week' not found in data.")
             return
 
         # Ensure types
@@ -36,16 +36,16 @@ class PlayoffOddsCumulativeViewer:
         df["year"] = df["year"].astype(int)
         df["cum_week"] = df["cum_week"].astype(int)
 
-        seasons = sorted(df["year"].unique())
-        if not seasons:
-            st.info("No seasons available.")
+        years = sorted(df["year"].unique())
+        if not years:
+            st.info("No years available.")
             return
 
-        min_year, max_year = int(seasons[0]), int(seasons[-1])
+        min_year, max_year = int(years[0]), int(years[-1])
 
         # Controls
         col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-        start_year = col1.number_input("Start Year", min_value=min_year, max_value=max_year, value=max_year, step=1, key="start_year_input_cum")
+        start_year = col1.number_input("Start Year", min_value=min_year, max_value=max_year, value=min_year, step=1, key="start_year_input_cum")
         end_year = col2.number_input("End Year", min_value=min_year, max_value=max_year, value=max_year, step=1, key="end_year_input_cum")
         metric = col3.selectbox("Metric", list(METRIC_LABELS.keys()), format_func=lambda k: METRIC_LABELS[k], key="metric_select_cum")
         go_clicked = col4.button("Go", key="go_graph_cum")
@@ -97,27 +97,27 @@ class PlayoffOddsCumulativeViewer:
             st.info("No data for selected filters.")
             return
 
-        managers = sorted(timeseries["Manager"].unique())
-        selected_mgrs = st.multiselect("Select Managers (leave empty for all)", managers, default=[], key="manager_select_cum")
+        managers = sorted(timeseries["manager"].unique())
+        selected_mgrs = st.multiselect("Select Managers (leave empty for all)", managers, default=[], key="select_cum")
         effective_mgrs = managers if len(selected_mgrs) == 0 else selected_mgrs
 
-        plot_df = timeseries[timeseries["Manager"].isin(effective_mgrs)].copy()
+        plot_df = timeseries[timeseries["manager"].isin(effective_mgrs)].copy()
         if plot_df.empty:
             st.info("No data for selected managers.")
             return
 
-        # Sort to ensure monotonic drawing within each season/manager
-        plot_df = plot_df.sort_values(["Manager", "year", "cum_week"], kind="mergesort").reset_index(drop=True)
-        line_ids = plot_df["Manager"].astype(str) + "_" + plot_df["year"].astype(str)
+        # Sort to ensure monotonic drawing within each year/manager
+        plot_df = plot_df.sort_values(["manager", "year", "cum_week"], kind="mergesort").reset_index(drop=True)
+        line_ids = plot_df["manager"].astype(str) + "_" + plot_df["year"].astype(str)
 
         fig = px.line(
             plot_df,
             x="cum_week",
             y=metric,
-            color="Manager",
+            color="manager",
             line_group=line_ids,
             markers=False,
-            labels={metric: METRIC_LABELS[metric], "Manager": "Manager"},
+            labels={metric: METRIC_LABELS[metric], "manager": "Manager"},
             hover_data={"year": True, "cum_week": True},
         )
         fig.update_traces(mode="lines", connectgaps=False)

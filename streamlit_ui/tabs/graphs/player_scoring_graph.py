@@ -10,24 +10,24 @@ def display_player_scoring_graphs(df_dict, prefix=""):
         st.error("Player Data not found.")
         return
 
-    required_cols = {"fantasy position", "season", "points", "owner", "player_display_name"}
+    required_cols = {"fantasy_position", "year", "points", "manager", "player_display_name"}
     if not required_cols.issubset(player_data.columns):
-        st.info("Required columns ('fantasy position', 'season', 'points', 'owner', 'player_display_name') not found for charting.")
+        st.info("Required columns ('fantasy_position', 'year', 'points', 'manager', 'player_display_name') not found for charting.")
         return
 
-    filtered = player_data[player_data["owner"] != "No Owner"].copy()
-    filtered["season"] = filtered["season"].astype(str)
-    seasons = sorted(filtered["season"].unique())
-    min_year, max_year = int(seasons[0]), int(seasons[-1])
+    filtered = player_data[player_data["manager"] != "No manager"].copy()
+    filtered["year"] = filtered["year"].astype(str)
+    years = sorted(filtered["year"].unique())
+    min_year, max_year = int(years[0]), int(years[-1])
 
     col1, col2 = st.columns(2)
     start_year = col1.number_input("Start Year", min_value=min_year, max_value=max_year, value=min_year, key=f"{prefix}_start_year")
     end_year = col2.number_input("End Year", min_value=min_year, max_value=max_year, value=max_year, key=f"{prefix}_end_year")
 
-    filtered = filtered[(filtered["season"].astype(int) >= start_year) & (filtered["season"].astype(int) <= end_year)]
+    filtered = filtered[(filtered["year"].astype(int) >= start_year) & (filtered["year"].astype(int) <= end_year)]
 
     position_order = ["QB", "RB", "WR", "TE", "W/R/T", "DEF", "K", "BN", "IR"]
-    available_positions = [pos for pos in position_order if pos in filtered["fantasy position"].unique()]
+    available_positions = [pos for pos in position_order if pos in filtered["fantasy_position"].unique()]
     default_positions = [pos for pos in available_positions if pos not in {"BN", "IR"}]
 
     with st.expander("Select Positions to Display", expanded=True):
@@ -39,7 +39,7 @@ def display_player_scoring_graphs(df_dict, prefix=""):
             if checked:
                 selected_positions.append(pos)
 
-    filtered = filtered[filtered["fantasy position"].isin(selected_positions)]
+    filtered = filtered[filtered["fantasy_position"].isin(selected_positions)]
 
     player_search = st.text_input(
         "Enter player names (comma separated):",
@@ -91,40 +91,40 @@ def display_player_scoring_graphs(df_dict, prefix=""):
         else:
             for player in filtered["player_display_name"].unique():
                 player_data = filtered[filtered["player_display_name"] == player].copy()
-                player_data["season"] = player_data["season"].astype(int)
-                # Group by season and calculate mean points per season
-                season_means = (
-                    player_data.groupby("season")["points"]
+                player_data["year"] = player_data["year"].astype(int)
+                # Group by year and calculate mean points per year
+                year_means = (
+                    player_data.groupby("year")["points"]
                     .mean()
                     .reset_index()
-                    .sort_values("season")
+                    .sort_values("year")
                 )
-                season_means["cumulative_avg"] = season_means["points"].expanding().mean()
+                year_means["cumulative_avg"] = year_means["points"].expanding().mean()
                 fig.add_trace(go.Scatter(
-                    x=season_means["season"],
-                    y=season_means["points"],
+                    x=year_means["year"],
+                    y=year_means["points"],
                     mode="markers",
-                    name=f"{player} Season Avg Points",
+                    name=f"{player} year Avg Points",
                     marker=dict(size=8),
-                    hovertemplate=f"Player: {player}<br>Season: %{{x}}<br>Season Avg Points: %{{y}}<extra></extra>"
+                    hovertemplate=f"Player: {player}<br>year: %{{x}}<br>year Avg Points: %{{y}}<extra></extra>"
                 ))
                 fig.add_trace(go.Scatter(
-                    x=season_means["season"],
-                    y=season_means["cumulative_avg"],
+                    x=year_means["year"],
+                    y=year_means["cumulative_avg"],
                     mode="lines",
-                    name=f"{player} Cumulative Season Avg",
+                    name=f"{player} Cumulative year Avg",
                     line=dict(dash="dash"),
-                    hovertemplate=f"Player: {player}<br>Season: %{{x}}<br>Cumulative Season Avg: %{{y:.2f}}<extra></extra>"
+                    hovertemplate=f"Player: {player}<br>year: %{{x}}<br>Cumulative year Avg: %{{y:.2f}}<extra></extra>"
                 ))
             fig.update_layout(
-                xaxis_title="Season",
+                xaxis_title="year",
                 yaxis_title="Points Per Game",
                 legend_title="Legend",
-                title="Player Season Points and Cumulative Average"
+                title="Player year Points and Cumulative Average"
             )
             fig.update_yaxes(showgrid=True)
             fig.update_xaxes(showgrid=True, tickmode='linear', dtick=1)
-            st.subheader("Player Season Points and Cumulative Average")
+            st.subheader("Player year Points and Cumulative Average")
             st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Enter at least one player name to display the graph.")

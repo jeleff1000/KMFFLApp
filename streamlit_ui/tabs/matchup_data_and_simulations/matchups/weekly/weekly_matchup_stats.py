@@ -9,9 +9,9 @@ class WeeklyMatchupStatsViewer:
         if 'win' in self.df.columns:
             self.df['win'] = self.df['win'] == 1
             self.df['is_playoffs_check'] = self.df['is_playoffs'] == 1
-            display_df = self.df[['Manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'win', 'is_playoffs_check']]
+            display_df = self.df[['manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'win', 'is_playoffs_check']]
             display_df = display_df.rename(columns={
-                'Manager': 'Manager',
+                'manager': 'manager',
                 'week': 'Week',
                 'year': 'Year',
                 'opponent': 'Opponent',
