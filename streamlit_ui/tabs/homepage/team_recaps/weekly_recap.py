@@ -316,33 +316,33 @@ def display_weekly_recap(
 
     df = matchup_df.copy()
 
-    col_year = _find_col(df, ["manager_year"])
-    col_week = _find_col(df, ["manager_week"])
-    col_manager = _find_manager_column(df)
+    col_year = _find_col(df, ["year"])
+    col_week = _find_col(df, ["week"])
+    col_manager = _find_col(df, ["manager"])
 
-    col_opponent = _find_col(df, ["opponent", "opponent_team", "opp"])
-    col_team_points = _find_col(df, ["team_points", "team score", "score", "points_for", "points for"])
-    col_opponent_score = _find_col(df, ["opponent score", "opponent_score", "opp_points", "points_against", "points against", "opp score"])
+    col_opponent = _find_col(df, ["opponent"])
+    col_team_points = _find_col(df, ["team_points"])
+    col_opponent_score = _find_col(df, ["opponent_score"])
 
-    col_weekly_mean = _find_col(df, ["league_weekly_mean"])
-    col_weekly_median = _find_col(df, ["league_weekly_median"])
-    col_teams_beat = _find_col(df, ["teams_beat_this_week", "teams beat this week", "would_beat"])
+    col_weekly_mean = _find_col(df, ["weekly_mean"])
+    col_weekly_median = _find_col(df, ["weekly_median"])
+    col_teams_beat = _find_col(df, ["teams_beat_this_week"])
 
-    col_is_playoffs = _find_col(df, ["is_playoffs", "is playoffs", "is_playoff", "playoffs", "postseason", "is_postseason"])
-    col_win = _find_col(df, ["win", "won", "is_win", "is win", "result", "w"])
-    col_close_margin = _find_col(df, ["close_margin", "close margin", "is_close", "is close", "close_game", "close game", "nail_biter"])
+    col_is_playoffs = _find_col(df, ["is_playoffs"])
+    col_win = _find_col(df, ["win"])
+    col_close_margin = _find_col(df, ["close_margin"])
 
-    col_above_league_median = _find_col(df, ["above_league_median", "above league median", "above_median", "above median"])
+    col_above_league_median = _find_col(df, ["above_league_median"])
 
     col_above_proj = _find_col(df, ["above_proj_score"])
-    col_projected_wins = _find_col(df, ["projected_wins", "is_favored", "favored", "favorite"])
-    col_win_ats = _find_col(df, ["win_vs_spread", "win_matchup_against_the_spread", "win_ats", "covered", "cover", "beat_spread"])
+    col_projected_wins = _find_col(df, ["proj_wins"])
+    col_win_ats = _find_col(df, ["win_vs_spread"])
 
-    col_expected_odds = _find_col(df, ["expected_odds", "win_probability", "proj_win_prob", "odds"])
-    col_expected_spread = _find_col(df, ["expected_spread", "proj_spread", "spread"])
-    col_margin = _find_col(df, ["margin", "score_margin", "point_diff", "points_diff", "margin_of_victory"])
-    col_proj_score_err = _find_col(df, ["proj_score_error", "projected_score_error", "projection_error"])
-    col_abs_proj_score_err = _find_col(df, ["abs_proj_score_error", "absolute value projected score error", "abs_projected_score_error", "abs proj score error"])
+    col_expected_odds = _find_col(df, ["expected_odds"])
+    col_expected_spread = _find_col(df, ["expected_spread"])
+    col_margin = _find_col(df, ["margin"])
+    col_proj_score_err = _find_col(df, ["proj_score_error"])
+    col_abs_proj_score_err = _find_col(df, ["abs_proj_score_error"])
 
     if col_year:
         df = df[pd.to_numeric(df[col_year], errors="coerce").astype("Int64") == year]
