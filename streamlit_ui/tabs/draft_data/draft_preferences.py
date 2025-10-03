@@ -115,11 +115,12 @@ def display_draft_preferences(draft_data, player_df):
                     'manager': 'first',
                     'week': pd.Series.nunique
                 }).reset_index()
+                aggregated_data['season_ppg'] = (aggregated_data['points'] / aggregated_data['week']).round(2)
 
                 aggregated_data['personal_position_rank'] = (
                     aggregated_data.groupby(['year', 'yahoo_position', 'manager'])['cost']
                     .rank(method='first', ascending=False)
-                    .fillna(0)  # Replace NaN with 0
+                    .fillna(0)
                     .astype(int)
                     .astype(str)
                 )
@@ -128,7 +129,6 @@ def display_draft_preferences(draft_data, player_df):
                 aggregated_data = order_positions(aggregated_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
                 aggregated_data = aggregated_data[aggregated_data['cost'] > 0]
 
-                # Remove years where all costs are zero in the aggregated data
                 nonzero_years_agg = aggregated_data.groupby('year')['cost'].sum()
                 valid_years_agg = nonzero_years_agg[nonzero_years_agg != 0].index.tolist()
                 aggregated_data = aggregated_data[aggregated_data['year'].isin(valid_years_agg)]
@@ -141,7 +141,7 @@ def display_draft_preferences(draft_data, player_df):
                         max_cost=('cost', 'max'),
                         min_cost=('cost', 'min'),
                         median_cost=('cost', 'median'),
-                        ppg=('ppg', 'mean'),
+                        season_ppg=('season_ppg', 'mean'),
                         times_drafted=('personal_position_rank', 'count')
                     ).reset_index()
                     avg_data['manager'] = 'League Average'
@@ -153,14 +153,14 @@ def display_draft_preferences(draft_data, player_df):
                         max_cost=('cost', 'max'),
                         min_cost=('cost', 'min'),
                         median_cost=('cost', 'median'),
-                        ppg=('ppg', 'mean'),
+                        season_ppg=('season_ppg', 'mean'),
                         times_drafted=('personal_position_rank', 'count')
                     ).reset_index()
 
-                for col in ['avg_cost', 'max_cost', 'min_cost', 'median_cost', 'ppg']:
+                for col in ['avg_cost', 'max_cost', 'min_cost', 'median_cost', 'season_ppg']:
                     avg_data[col] = avg_data[col].round(2)
 
-                score_cols = ['avg_cost', 'ppg', 'times_drafted']
+                score_cols = ['avg_cost', 'season_ppg', 'times_drafted']
                 avg_data = avg_data[~((avg_data[score_cols].isnull()) | (avg_data[score_cols] == 0)).all(axis=1)]
 
                 avg_data['rank_num'] = avg_data['personal_position_rank'].str.extract(r'(\d+)$').fillna(0).astype(int)
@@ -169,7 +169,7 @@ def display_draft_preferences(draft_data, player_df):
 
                 columns_to_display = [
                     'personal_position_rank', 'yahoo_position', 'manager',
-                    'avg_cost', 'max_cost', 'min_cost', 'median_cost', 'ppg', 'times_drafted'
+                    'avg_cost', 'max_cost', 'min_cost', 'median_cost', 'season_ppg', 'times_drafted'
                 ]
                 st.subheader(table_title)
                 st.dataframe(avg_data[columns_to_display], hide_index=True)
@@ -204,12 +204,11 @@ def display_draft_preferences(draft_data, player_df):
                     'points': 'sum',
                     'week': pd.Series.nunique
                 }).reset_index()
-                player_data['ppg'] = (player_data['points'] / player_data['week']).round(2)
+                player_data['season_ppg'] = (player_data['points'] / player_data['week']).round(2)
 
                 player_data = order_positions(player_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
                 player_data = player_data[player_data['cost'] > 0]
 
-                # Remove years where all costs are zero in the player data
                 nonzero_years_player = player_data.groupby('player')['cost'].sum()
                 valid_players = nonzero_years_player[nonzero_years_player != 0].index.tolist()
                 player_data = player_data[player_data['player'].isin(valid_players)]
@@ -220,7 +219,7 @@ def display_draft_preferences(draft_data, player_df):
                         max_cost=('cost', 'max'),
                         min_cost=('cost', 'min'),
                         median_cost=('cost', 'median'),
-                        ppg=('ppg', 'mean'),
+                        season_ppg=('season_ppg', 'mean'),
                         times_kept=('player', 'count')
                     ).reset_index()
                     avg_data['manager'] = 'League Average'
@@ -230,14 +229,14 @@ def display_draft_preferences(draft_data, player_df):
                         max_cost=('cost', 'max'),
                         min_cost=('cost', 'min'),
                         median_cost=('cost', 'median'),
-                        ppg=('ppg', 'mean'),
+                        season_ppg=('season_ppg', 'mean'),
                         times_kept=('player', 'count')
                     ).reset_index()
 
-                for col in ['avg_cost', 'max_cost', 'min_cost', 'median_cost', 'ppg']:
+                for col in ['avg_cost', 'max_cost', 'min_cost', 'median_cost', 'season_ppg']:
                     avg_data[col] = avg_data[col].round(2)
 
-                score_cols = ['avg_cost', 'ppg', 'times_kept']
+                score_cols = ['avg_cost', 'season_ppg', 'times_kept']
                 avg_data = avg_data[~((avg_data[score_cols].isnull()) | (avg_data[score_cols] == 0)).all(axis=1)]
 
                 avg_data = order_positions(avg_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
@@ -245,13 +244,10 @@ def display_draft_preferences(draft_data, player_df):
 
                 columns_to_display = [
                     'yahoo_position', 'manager',
-                    'avg_cost', 'max_cost', 'min_cost', 'median_cost', 'ppg', 'times_kept'
+                    'avg_cost', 'max_cost', 'min_cost', 'median_cost', 'season_ppg', 'times_kept'
                 ]
                 st.subheader(table_title)
                 st.dataframe(avg_data[columns_to_display], hide_index=True)
 
             get_drafted_table(draft_data[draft_data['is_keeper_status'].ne(1).fillna(True)], "Drafted Players")
             get_kept_table(draft_data[draft_data['is_keeper_status'].eq(1).fillna(False)], "Kept Players")
-
-    # The rest of the code for the graph tab would be similarly updated to use snake_case columns.
-    # For brevity, only the table logic is shown here, but apply the same renaming to the graph logic.

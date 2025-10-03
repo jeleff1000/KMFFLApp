@@ -45,8 +45,10 @@ def display_scoring_outcomes(draft_data, player_df):
     if selected_team_managers:
         draft_data = draft_data[draft_data['manager'].isin(selected_team_managers)]
 
+    # Add ppg_season to merge columns
+    merge_cols = ['player', 'points', 'week', 'year', 'yahoo_position', 'ppg_season']
     merged_data = draft_data.merge(
-        player_df[['player', 'points', 'week', 'year', 'yahoo_position']],
+        player_df[merge_cols],
         left_on=['player_name', 'year'],
         right_on=['player', 'year'],
         how='left'
@@ -75,10 +77,12 @@ def display_scoring_outcomes(draft_data, player_df):
         'cost': 'first',
         'pick': 'first',
         'manager': 'first',
-        'week': pd.Series.nunique
+        'week': pd.Series.nunique,
+        'ppg_season': 'first'
     }).reset_index()
 
-    aggregated_data['ppg'] = (aggregated_data['points'] / aggregated_data['week']).round(2)
+    # Use ppg_season from source data
+    aggregated_data['PPG'] = aggregated_data['ppg_season']
 
     def cost_rank_logic(row, group):
         year = str(row['year'])
@@ -101,7 +105,7 @@ def display_scoring_outcomes(draft_data, player_df):
     aggregated_data['total_points_rank'] = aggregated_data.groupby(['year', 'position'])['points'].transform(
         lambda x: x.rank(method='first', ascending=False).astype(int)
     )
-    aggregated_data['ppg_rank'] = aggregated_data.groupby(['year', 'position'])['ppg'].transform(
+    aggregated_data['ppg_rank'] = aggregated_data.groupby(['year', 'position'])['PPG'].transform(
         lambda x: x.rank(method='first', ascending=False).astype(int)
     )
 
@@ -113,7 +117,6 @@ def display_scoring_outcomes(draft_data, player_df):
         'total_points_rank': 'Total Points Rank',
         'ppg_rank': 'PPG Rank',
         'total_points': 'Total Points',
-        'ppg': 'PPG',
         'cost': 'Cost',
         'manager': 'manager'
     }, inplace=True)
