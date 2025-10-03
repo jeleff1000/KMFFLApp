@@ -98,4 +98,4 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
     if name_search:
         merged_df = merged_df[merged_df['player_name'].str.contains(name_search, case=False, na=False)]
 
-    st.dataframe(merged_df, hide_index=True)
+    st.dataframe(merged_df, hide_index=True, use_container_width=True)
