@@ -8,7 +8,7 @@ class CareerHeadToHeadViewer:
     def display(self):
         st.header("Head-to-Head Matchups")
         if self.df is not None:
-            required_columns = ['manager', 'opponent', 'win', 'loss', 'team_points', 'opponent_score', 'margin']
+            required_columns = ['manager', 'opponent', 'win', 'loss', 'team_points', 'opponent_points', 'margin']
             if all(column in self.df.columns for column in required_columns):
                 viewer_type = st.selectbox("Select Viewer Type", ["Record", "Total Points", "Per Game", "Margin"])
 

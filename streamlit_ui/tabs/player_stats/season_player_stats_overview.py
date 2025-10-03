@@ -13,7 +13,7 @@ class StreamlitSeasonPlayerDataViewer:
         filtered_data = self.apply_filters(filters)
         if column in filtered_data.columns:
             unique_values = filtered_data[column].dropna().unique()
-            unique_values = [str(value) for value in unique_values]  # Convert all values to strings
+            unique_values = [str(value) for value in unique_values]
             return sorted(unique_values)
         else:
             return []
@@ -21,15 +21,15 @@ class StreamlitSeasonPlayerDataViewer:
     def apply_filters(self, filters):
         filtered_data = self.player_data
         for column, values in filters.items():
-            if values:  # Treat empty lists as "All"
+            if values:
                 if column == "year":
-                    values = [str(value) for value in values]  # Convert filter values to strings
-                    filtered_data[column] = filtered_data[column].astype(str)  # Convert column values to strings
+                    values = [str(value) for value in values]
+                    filtered_data[column] = filtered_data[column].astype(str)
                 filtered_data = filtered_data[filtered_data[column].isin(values)]
         return filtered_data
 
     def display(self):
-        st.title("year Player Data Viewer")
+        st.title("Season Player Data Viewer")
         tabs = st.tabs(["Basic Stats", "Advanced Stats", "Matchup Stats"])
 
         def display_filters(tab_index, tab_name):
@@ -41,7 +41,7 @@ class StreamlitSeasonPlayerDataViewer:
                 player_search = st.text_input("Search Player", key=f"player_search_{tab_name}_{tab_index}")
             with col2:
                 manager_values = st.multiselect("Select manager", self.get_unique_values("manager", selected_filters),
-                                              key=f"manager_value_{tab_name}_{tab_index}")
+                                                key=f"manager_value_{tab_name}_{tab_index}")
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_rostered = st.toggle("Rostered", value=True, key=f"show_rostered_{tab_name}_{tab_index}")
@@ -51,19 +51,18 @@ class StreamlitSeasonPlayerDataViewer:
                         'player'].unique().tolist()
             selected_filters["manager"] = manager_values
 
-            # Filter out players with "No manager" if toggle is on
             if show_rostered:
                 selected_filters["manager"] = [manager for manager in selected_filters["manager"] if manager != "No manager"]
                 if not selected_filters["manager"]:
                     selected_filters["manager"] = [manager for manager in self.get_unique_values("manager", selected_filters) if
-                                                 manager != "No manager"]
+                                                   manager != "No manager"]
 
-            # Second row: Position, fantasy_position filters, Started toggle, and Per Game toggle
+            # Second row: NFL Position, fantasy_position filters, Started toggle, and Per Game toggle
             col1, col2, col3, col4 = st.columns([1, 1, 0.5, 0.5])
             with col1:
-                position_values = st.multiselect("Select Position",
-                                                 self.get_unique_values("position", selected_filters),
-                                                 key=f"position_value_{tab_name}_{tab_index}")
+                nfl_position_values = st.multiselect("Select NFL Position",
+                                                     self.get_unique_values("nfl_position", selected_filters),
+                                                     key=f"nfl_position_value_{tab_name}_{tab_index}")
             with col2:
                 fantasy_position_values = st.multiselect("Select fantasy_position",
                                                          self.get_unique_values("fantasy_position", selected_filters),
@@ -74,10 +73,9 @@ class StreamlitSeasonPlayerDataViewer:
             with col4:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_per_game = st.toggle("Per Game", value=False, key=f"show_per_game_{tab_name}_{tab_index}")
-            selected_filters["position"] = position_values
+            selected_filters["nfl_position"] = nfl_position_values
             selected_filters["fantasy_position"] = fantasy_position_values
 
-            # Filter out players with fantasy_position BN or IR if toggle is on
             if show_started:
                 selected_filters["fantasy_position"] = [pos for pos in selected_filters["fantasy_position"] if
                                                         pos not in ["BN", "IR"]]
@@ -86,11 +84,11 @@ class StreamlitSeasonPlayerDataViewer:
                                                             self.get_unique_values("fantasy_position", selected_filters)
                                                             if pos not in ["BN", "IR"]]
 
-            # Third row: Team, opponent_team, year filters
+            # Third row: NFL Team, opponent_team, year filters
             col1, col2, col3 = st.columns(3)
             with col1:
-                team_values = st.multiselect("Select Team", self.get_unique_values("team", selected_filters),
-                                             key=f"team_value_{tab_name}_{tab_index}")
+                nfl_team_values = st.multiselect("Select NFL Team", self.get_unique_values("nfl_team", selected_filters),
+                                                 key=f"nfl_team_value_{tab_name}_{tab_index}")
             with col2:
                 opponent_team_values = st.multiselect("Select opponent_team",
                                                       self.get_unique_values("opponent_team", selected_filters),
@@ -98,17 +96,17 @@ class StreamlitSeasonPlayerDataViewer:
             with col3:
                 year_values = st.multiselect("Select year", self.get_unique_values("year", selected_filters),
                                              key=f"year_value_{tab_name}_{tab_index}")
-            selected_filters["team"] = team_values
+            selected_filters["nfl_team"] = nfl_team_values
             selected_filters["opponent_team"] = opponent_team_values
             selected_filters["year"] = year_values
 
             return selected_filters, show_per_game
 
         def determine_position(filtered_data):
-            unique_positions = filtered_data['position'].unique()
+            unique_positions = filtered_data['nfl_position'].unique()
             if len(unique_positions) == 1:
-                return unique_positions[0]  # Return the single position if all rows have the same position
-            return "All"  # Default to "All" if multiple positions are present
+                return unique_positions[0]
+            return "All"
 
         with tabs[0]:
             st.header("Basic Stats")
@@ -134,7 +132,6 @@ class StreamlitSeasonPlayerDataViewer:
             st.header("Matchup Stats")
             filters, show_per_game = display_filters(tab_index=2, tab_name="MatchupStats")
             filtered_data = self.apply_filters(filters)
-            # Merge player_data with matchup_data to include managerweek
             if 'managerweek' in filtered_data.columns and 'ManagerWeek' in self.matchup_data.columns:
                 merged_data = pd.merge(filtered_data, self.matchup_data[['ManagerWeek']], left_on='managerweek',
                                        right_on='ManagerWeek', how='left')
@@ -145,23 +142,18 @@ class StreamlitSeasonPlayerDataViewer:
                     "The 'managerweek' column is not available in the player data or 'ManagerWeek' column is not available in the matchup data.")
 
     def calculate_per_game_stats(self, stats_df, filtered_data):
-        # Calculate the number of unique weeks where points is not 0 for each player
         unique_weeks = filtered_data[filtered_data['points'] != 0].groupby('player')['week'].nunique().reset_index()
         unique_weeks.columns = ['player', 'unique_weeks']
 
-        # Merge the unique weeks with the stats dataframe
         stats_df = pd.merge(stats_df, unique_weeks, on='player', how='left')
 
-        # Ensure numeric columns are converted to float before division
         numeric_columns = [col for col in stats_df.columns if
-                           col not in ['player', 'team', 'year', 'manager', 'position', 'unique_weeks']]
+                           col not in ['player', 'nfl_team', 'year', 'manager', 'nfl_position', 'unique_weeks']]
         stats_df[numeric_columns] = stats_df[numeric_columns].apply(pd.to_numeric, errors='coerce')
 
-        # Divide all the stats by the number of unique weeks
         for col in numeric_columns:
             stats_df[col] = stats_df[col] / stats_df['unique_weeks']
 
-        # Round yard stats to two digits and touchdown stats to three digits
         yard_stats = ['points', 'Pass Yds', 'Rush Yds', 'Rec Yds', 'FG Yds', 'Def Yds Allow', 'team_points']
         td_stats = ['Int Pass TD', 'Rush TD', 'Rec TD', 'defensive_td']
 
@@ -173,7 +165,6 @@ class StreamlitSeasonPlayerDataViewer:
             if col in stats_df.columns:
                 stats_df[col] = stats_df[col].astype(float).round(3)
 
-        # Drop the unique_weeks column
         stats_df = stats_df.drop(columns=['unique_weeks'])
 
         return stats_df

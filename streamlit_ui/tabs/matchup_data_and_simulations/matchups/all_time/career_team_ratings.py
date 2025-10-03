@@ -21,7 +21,7 @@ class CareerTeamRatingsViewer:
 
         # Coerce numerics
         self.numeric_cols: List[str] = [
-            "team_points", "win", "loss", "opponent_score",
+            "team_points", "win", "loss", "opponent_points",
             "avg_seed", "p_playoffs", "p_bye", "exp_final_wins",
             "p_semis", "p_final", "p_champ",
             "x1_seed", "Final Playoff Seed",
@@ -41,7 +41,7 @@ class CareerTeamRatingsViewer:
         # Leading display order (career)
         self.leading_order: List[str] = [
             "manager", "win", "loss",
-            "team_points", "opponent_score", "power_rating", "power rating",
+            "team_points", "opponent_points", "power_rating", "power rating",
         ]
 
         # Remaining original known columns (career, excludes hidden)
@@ -84,7 +84,7 @@ class CareerTeamRatingsViewer:
 
         # Means (season averages)
         mean_cols = [c for c in [
-            "team_points", "opponent_score", "power_rating", "power rating",
+            "team_points", "opponent_points", "power_rating", "power rating",
             "exp_final_wins", "avg_seed",
             "p_playoffs", "p_bye", "p_semis", "p_final", "p_champ",
         ] if c in present]
@@ -138,7 +138,7 @@ class CareerTeamRatingsViewer:
 
         # Averages across seasons
         mean_cols = [c for c in [
-            "team_points", "opponent_score", "power_rating", "power rating",
+            "team_points", "opponent_points", "power_rating", "power rating",
             "exp_final_wins", "avg_seed",
             "p_playoffs", "p_bye", "p_semis", "p_final", "p_champ",
             "Final Playoff Seed",
@@ -203,7 +203,7 @@ class CareerTeamRatingsViewer:
             if c in df_show.columns:
                 column_config[c] = st.column_config.NumberColumn(c, format="%.2f")
         for c in ["win", "loss", "wins_vs_shuffle_wins", "shuffle_1_seed", "seed_vs_shuffle_seed",
-                  "opponent_score", "Final Playoff Seed"]:
+                  "opponent_points", "Final Playoff Seed"]:
             if c in df_show.columns:
                 column_config[c] = st.column_config.NumberColumn(c, format="%d")
 

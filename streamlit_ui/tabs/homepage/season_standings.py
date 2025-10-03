@@ -30,7 +30,7 @@ class SeasonStandingsViewer:
 
             agg_dict = {
                 'team_points': aggregation_func,
-                'opponent_score': aggregation_func,
+                'opponent_points': aggregation_func,
                 'win': aggregation_func,
                 'loss': aggregation_func,
                 'is_playoffs': aggregation_func,
@@ -38,18 +38,15 @@ class SeasonStandingsViewer:
                 'semifinal': aggregation_func,
                 'championship': aggregation_func,
                 'champion': aggregation_func,
-                'team_name': 'first'
+                'team_name': 'first',
+                'playoff_seed_to_date': 'first'
             }
 
             aggregated_df = df.groupby(['manager', 'year']).agg(agg_dict).reset_index()
             aggregated_df = pd.merge(aggregated_df, sacko_df, on=['manager', 'year'], how='left')
 
-            if 'final_playoff_seed' in df.columns:
-                seed_df = df[['manager', 'year', 'final_playoff_seed']].drop_duplicates(subset=['manager', 'year'])
-                aggregated_df = pd.merge(aggregated_df, seed_df, on=['manager', 'year'], how='left')
-
             if aggregation_type:
-                columns_to_round_2 = ['team_points', 'opponent_score']
+                columns_to_round_2 = ['team_points', 'opponent_points']
                 aggregated_df[columns_to_round_2] = aggregated_df[columns_to_round_2].round(2)
                 aggregated_df['win'] = aggregated_df['win'].round(3)
                 aggregated_df['loss'] = aggregated_df['loss'].round(3)
@@ -79,20 +76,18 @@ class SeasonStandingsViewer:
 
             aggregated_df['Final Result'] = aggregated_df.apply(get_final_result, axis=1)
 
-            display_columns = ['final_playoff_seed', 'manager', 'team_name', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Final Result'] \
-                if 'final_playoff_seed' in aggregated_df.columns else \
-                ['manager', 'team_name', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'Final Result']
+            display_columns = ['playoff_seed_to_date', 'manager', 'team_name', 'year', 'win', 'loss', 'team_points', 'opponent_points', 'Final Result']
 
             display_df = aggregated_df[display_columns]
             display_df = display_df.rename(columns={
-                'final_playoff_seed': 'Seed',
+                'playoff_seed_to_date': 'Seed',
                 'manager': 'Manager',
                 'team_name': 'Team',
                 'year': 'Year',
                 'win': 'W',
                 'loss': 'L',
                 'team_points': 'PF',
-                'opponent_score': 'PA'
+                'opponent_points': 'PA'
             })
 
             years = sorted(display_df['Year'].unique())

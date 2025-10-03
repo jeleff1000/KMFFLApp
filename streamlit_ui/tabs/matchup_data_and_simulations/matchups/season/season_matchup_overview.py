@@ -88,5 +88,5 @@ class SeasonMatchupOverviewViewer:
         st.subheader("Summary Data")
         total_games = len(filtered_df)
         avg_team_points = filtered_df['team_points'].mean()
-        avg_opponent_points = filtered_df['opponent_score'].mean()
+        avg_opponent_points = filtered_df['opponent_points'].mean()
         st.write(f"Total Games: {total_games} | Avg Team Points: {avg_team_points:.2f} | Avg Opponent Points: {avg_opponent_points:.2f}")

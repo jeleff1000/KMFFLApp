@@ -18,7 +18,7 @@ class SeasonStandingsViewer:
 
             aggregated_df = df.groupby(['manager', 'year']).agg({
                 'team_points': aggregation_func,
-                'opponent_score': aggregation_func,
+                'opponent_points': aggregation_func,
                 'win': aggregation_func,
                 'loss': aggregation_func,
                 'is_playoffs': aggregation_func,
@@ -48,12 +48,12 @@ class SeasonStandingsViewer:
                 filtered_df['Loss'] = filtered_df['loss'].apply(lambda x: '✔️' if x else '')
                 week_display_cols = [
                     'week', 'Win', 'Loss', 'opponent',
-                    'team_points', 'opponent_score', 'team_projected_points', 'opponent_projected_points'
+                    'team_points', 'opponent_points', 'team_projected_points', 'opponent_projected_points'
                 ]
                 week_display_cols = [col for col in week_display_cols if col in filtered_df.columns]
                 table = filtered_df[week_display_cols].rename(columns={
                     'team_points': 'PF',
-                    'opponent_score': 'PA',
+                    'opponent_points': 'PA',
                     'team_projected_points': 'Proj PF',
                     'opponent_projected_points': 'Proj PA'
                 })

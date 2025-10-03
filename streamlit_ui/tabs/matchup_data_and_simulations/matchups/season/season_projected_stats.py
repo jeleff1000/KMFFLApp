@@ -8,22 +8,22 @@ class SeasonProjectedStatsViewer:
     def display(self, prefix=""):
         st.header("Season Projected Stats")
         required_columns = [
-            'manager', 'opponent', 'team_points', 'opponent_score', 'team_projected_points',
+            'manager', 'opponent', 'team_points', 'opponent_points', 'team_projected_points',
             'opponent_projected_points', 'expected_odds', 'margin', 'expected_spread', 'manager_week', 'year',
             'proj_score_error', 'abs_proj_score_error',
             'proj_wins', 'above_proj_score', 'below_proj_score', 'win_vs_spread',
             'underdog_wins', 'favorite_losses'
         ]
         if all(col in self.df.columns for col in required_columns):
-            self.df['win'] = self.df['team_points'] > self.df['opponent_score']
-            self.df['loss'] = self.df['team_points'] <= self.df['opponent_score']
+            self.df['win'] = self.df['team_points'] > self.df['opponent_points']
+            self.df['loss'] = self.df['team_points'] <= self.df['opponent_points']
 
             aggregation_type = st.toggle("Per Game", value=False, key=f"{prefix}_aggregation_type")
             aggregation_func = 'mean' if aggregation_type else 'sum'
 
             aggregated_df = self.df.groupby(['manager', 'year']).agg({
                 'team_points': aggregation_func,
-                'opponent_score': aggregation_func,
+                'opponent_points': aggregation_func,
                 'team_projected_points': aggregation_func,
                 'opponent_projected_points': aggregation_func,
                 'expected_odds': 'mean',
@@ -43,7 +43,7 @@ class SeasonProjectedStatsViewer:
 
             if aggregation_type:
                 columns_to_round_2 = [
-                    'team_points', 'opponent_score', 'team_projected_points', 'opponent_projected_points', 'margin',
+                    'team_points', 'opponent_points', 'team_projected_points', 'opponent_projected_points', 'margin',
                     'expected_spread', 'proj_score_error', 'abs_proj_score_error'
                 ]
                 columns_to_round_3 = [
@@ -63,7 +63,7 @@ class SeasonProjectedStatsViewer:
                 'win': 'W',
                 'loss': 'L',
                 'team_points': 'PF',
-                'opponent_score': 'PA',
+                'opponent_points': 'PA',
                 'team_projected_points': 'Projected Pts',
                 'opponent_projected_points': 'Opp Projected Pts',
                 'expected_odds': 'Expected Odds',

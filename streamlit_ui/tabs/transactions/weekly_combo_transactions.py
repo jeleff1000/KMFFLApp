@@ -39,7 +39,6 @@ def display_weekly_combo_transactions(transaction_df, player_df, draft_history_d
         return merged_df
 
     def get_weekly_add_drop_data(transaction_df, player_df):
-        # ensure 'manager' exists (fallback from 'nickname' or fill Unknown)
         if 'manager' not in transaction_df.columns:
             if 'nickname' in transaction_df.columns:
                 transaction_df = transaction_df.rename(columns={'nickname': 'manager'})
@@ -48,7 +47,7 @@ def display_weekly_combo_transactions(transaction_df, player_df, draft_history_d
 
         columns = {
             'transaction': ['transaction_id', 'player_name', 'week', 'year', 'transaction_type', 'faab_bid', 'manager'],
-            'player': ['player', 'week', 'year', 'rolling_point_total', 'position']
+            'player': ['player', 'week', 'year', 'rolling_point_total', 'yahoo_position']
         }
         merged_df = merge_and_calculate_points(transaction_df, player_df, columns)
 
@@ -91,13 +90,11 @@ def display_weekly_combo_transactions(transaction_df, player_df, draft_history_d
         ]]
 
     def get_trade_summary_data(transaction_df, player_df, draft_history_df):
-        # ---- NEW: mirror the same guard here ----
         if 'manager' not in transaction_df.columns:
             if 'nickname' in transaction_df.columns:
                 transaction_df = transaction_df.rename(columns={'nickname': 'manager'})
             else:
                 transaction_df['manager'] = 'Unknown'
-        # -----------------------------------------
 
         transaction_df['manager'].fillna('Unknown', inplace=True)
         transaction_df.drop_duplicates(subset=['transaction_id', 'player_name'], inplace=True)
@@ -114,16 +111,16 @@ def display_weekly_combo_transactions(transaction_df, player_df, draft_history_d
 
         columns = {
             'transaction': ['transaction_id', 'player_name', 'week', 'year', 'transaction_type', 'faab_bid', 'manager', 'cost', 'is_keeper_status'],
-            'player': ['player', 'week', 'year', 'rolling_point_total', 'position']
+            'player': ['player', 'week', 'year', 'rolling_point_total', 'yahoo_position']
         }
         merged_df = merge_and_calculate_points(trade_transactions, player_df, columns)
 
         merged_df['Rest_of_year_Rank'] = (
-            merged_df.groupby('position')['points_week_max']
+            merged_df.groupby('yahoo_position')['points_week_max']
                      .rank(ascending=False, method='min')
                      .fillna(0).astype(int)
         )
-        merged_df['Rest_of_year_Rank'] = merged_df['position'] + merged_df['Rest_of_year_Rank'].astype(str)
+        merged_df['Rest_of_year_Rank'] = merged_df['yahoo_position'] + merged_df['Rest_of_year_Rank'].astype(str)
         merged_df['Is Keeper'] = merged_df['is_keeper_status']
 
         def sort_names_ranks(names, ranks):
@@ -179,7 +176,6 @@ def display_weekly_combo_transactions(transaction_df, player_df, draft_history_d
         final_df['year'] = final_df['year'].astype(int).astype(str)
         final_df.drop_duplicates(inplace=True)
 
-        # No renaming: build expected output columns directly
         final_df['added_player']      = final_df['player_name']
         final_df['dropped_player']    = final_df['traded_away_name']
         final_df['add_pts_to_date']   = final_df['points_transaction_week']

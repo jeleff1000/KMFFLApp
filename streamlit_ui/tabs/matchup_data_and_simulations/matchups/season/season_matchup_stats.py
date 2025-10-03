@@ -27,10 +27,10 @@ class SeasonMatchupStatsViewer:
 
             # Only aggregate columns that exist in the DataFrame
             agg_columns = [
-                'team_points', 'opponent_score', 'win', 'loss', 'quarterfinal', 'semifinal', 'championship',
+                'team_points', 'opponent_points', 'win', 'loss', 'quarterfinal', 'semifinal', 'championship',
                 'champion', 'is_playoffs', 'margin', 'total_matchup_score', 'teams_beat_this_week',
                 'opponent_teams_beat_this_week', 'close_margin', 'above_league_median', 'below_league_median',
-                'above_opponent_median', 'below_opponent_median', 'gpa', 'real_score', 'real_opponent_score',
+                'above_opponent_median', 'below_opponent_median', 'gpa', 'real_score', 'real_opponent_points',
                 'real_margin', 'real_total_matchup_score'
             ]
             agg_dict = {col: aggregation_func for col in agg_columns if col in self.df.columns}
@@ -43,8 +43,8 @@ class SeasonMatchupStatsViewer:
             # Rounding
             if aggregation_type:
                 columns_to_round_2 = [c for c in [
-                    'team_points', 'opponent_score', 'margin', 'total_matchup_score', 'teams_beat_this_week',
-                    'opponent_teams_beat_this_week', 'gpa', 'real_score', 'real_opponent_score', 'real_margin',
+                    'team_points', 'opponent_points', 'margin', 'total_matchup_score', 'teams_beat_this_week',
+                    'opponent_teams_beat_this_week', 'gpa', 'real_score', 'real_opponent_points', 'real_margin',
                     'real_total_matchup_score'
                 ] if c in aggregated_df.columns]
                 columns_to_round_3 = [c for c in [
@@ -74,7 +74,7 @@ class SeasonMatchupStatsViewer:
 
             # Display columns (only those that exist)
             display_cols = [
-                'manager', 'year', 'win', 'loss', 'team_points', 'opponent_score', 'team_made_playoffs',
+                'manager', 'year', 'win', 'loss', 'team_points', 'opponent_points', 'team_made_playoffs',
                 'quarterfinal_check', 'semifinal_check', 'championship_check', 'champion_check', 'sacko'
             ]
             display_df = aggregated_df[[c for c in display_cols if c in aggregated_df.columns]]
@@ -83,7 +83,7 @@ class SeasonMatchupStatsViewer:
                 'win': 'W',
                 'loss': 'L',
                 'team_points': 'PF',
-                'opponent_score': 'PA',
+                'opponent_points': 'PA',
                 'team_made_playoffs': 'Playoffs',
                 'quarterfinal_check': 'Quarterfinals',
                 'semifinal_check': 'Semifinals',

@@ -7,12 +7,12 @@ class SeasonAdvancedStatsViewer:
     def display(self, prefix=""):
         st.header("Career Advanced Stats")
         required_columns = [
-            'manager', 'opponent', 'week', 'year', 'team_points', 'opponent_score', 'win',
+            'manager', 'opponent', 'week', 'year', 'team_points', 'opponent_points', 'win',
             'margin', 'total_matchup_score', 'teams_beat_this_week', 'opponent_teams_beat_this_week',
             'close_margin', 'above_league_median', 'below_league_median', 'above_opponent_median',
             'below_opponent_median', 'gpa', 'league_weekly_mean', 'league_weekly_median',
             'personal_season_mean', 'personal_season_median', 'winning_streak', 'losing_streak',
-            'real_score', 'real_opponent_score', 'real_margin', 'real_total_matchup_score'
+            'real_score', 'real_opponent_points', 'real_margin', 'real_total_matchup_score'
         ]
 
         available_columns = self.df.columns.tolist()
@@ -22,14 +22,14 @@ class SeasonAdvancedStatsViewer:
             st.write(f"The required columns are not available in the data: {missing_columns}")
             st.write(f"Available columns: {available_columns}")
         else:
-            self.df['loss'] = self.df['team_points'] <= self.df['opponent_score']
+            self.df['loss'] = self.df['team_points'] <= self.df['opponent_points']
 
             aggregation_type = st.toggle("Per Game", value=False, key=f"{prefix}_aggregation_type")
             aggregation_func = 'mean' if aggregation_type else 'sum'
 
             aggregated_df = self.df.groupby('manager').agg({
                 'team_points': aggregation_func,
-                'opponent_score': aggregation_func,
+                'opponent_points': aggregation_func,
                 'win': aggregation_func,
                 'loss': aggregation_func,
                 'margin': aggregation_func,
@@ -49,15 +49,15 @@ class SeasonAdvancedStatsViewer:
                 'winning_streak': 'max',
                 'losing_streak': 'max',
                 'real_score': aggregation_func,
-                'real_opponent_score': aggregation_func,
+                'real_opponent_points': aggregation_func,
                 'real_margin': aggregation_func,
                 'real_total_matchup_score': aggregation_func
             }).reset_index()
 
             if aggregation_type:
                 columns_to_round_2 = [
-                    'team_points', 'opponent_score', 'margin', 'total_matchup_score', 'teams_beat_this_week',
-                    'opponent_teams_beat_this_week', 'gpa', 'real_score', 'real_opponent_score', 'real_margin',
+                    'team_points', 'opponent_points', 'margin', 'total_matchup_score', 'teams_beat_this_week',
+                    'opponent_teams_beat_this_week', 'gpa', 'real_score', 'real_opponent_points', 'real_margin',
                     'real_total_matchup_score'
                 ]
                 columns_to_round_3 = [
@@ -75,7 +75,7 @@ class SeasonAdvancedStatsViewer:
                 'win': 'W',
                 'loss': 'L',
                 'team_points': 'PF',
-                'opponent_score': 'PA',
+                'opponent_points': 'PA',
                 'margin': 'Margin',
                 'total_matchup_score': 'Total Matchup Score',
                 'teams_beat_this_week': 'W Vs Every Tm',
@@ -93,7 +93,7 @@ class SeasonAdvancedStatsViewer:
                 'winning_streak': 'Max W Streak',
                 'losing_streak': 'Max L Streak',
                 'real_score': 'Real Score',
-                'real_opponent_score': 'Real Opp Score',
+                'real_opponent_points': 'Real Opp Score',
                 'real_margin': 'Real Margin',
                 'real_total_matchup_score': 'Real Total Matchup Score'
             })

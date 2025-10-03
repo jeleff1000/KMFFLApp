@@ -5,7 +5,6 @@ import html
 import pandas as pd
 import streamlit as st
 
-# -------------------------------- Constants ---------------------------------
 PLAYER_POINTS_CANDIDATES = [
     "points", "Points", "weekly_points", "Week Points", "rolling_point_total"
 ]
@@ -47,7 +46,6 @@ AWARD_CSS = """
 </style>
 """
 
-# ------------------------------ Data Helpers --------------------------------
 def _get_player_df(df_dict: Optional[Dict[Any, Any]]) -> Optional[pd.DataFrame]:
     if not isinstance(df_dict, dict):
         return None
@@ -125,7 +123,6 @@ def _find_fantasy_position_col(df: pd.DataFrame) -> Optional[str]:
             return c
     return None
 
-# -------- Most Improved (two-week slice: prev + current cumulative_week) ----
 def _compute_most_improved_two_week(df: pd.DataFrame,
                                     name_col: str,
                                     points_col: str) -> Optional[pd.Series]:
@@ -159,7 +156,6 @@ def _compute_most_improved_two_week(df: pd.DataFrame,
     rep_row["__improvement_delta__"] = float(best["improvement"])
     return rep_row
 
-# ------------------------------- Styling / Awards ---------------------------
 def _ensure_award_css() -> None:
     st.markdown(AWARD_CSS, unsafe_allow_html=True)
 
@@ -197,7 +193,6 @@ def _render_award(row: Optional[pd.Series],
     )
     return f'<div class="award-card {kind}">{img_html}{content_html}<div class="award-emoji">{_award_emoji(kind)}</div></div>'
 
-# ------------------------------- Main Display -------------------------------
 def display_player_weekly_recap(
     df_dict: Optional[Dict[Any, Any]],
     year: Optional[int],
@@ -227,7 +222,6 @@ def display_player_weekly_recap(
 
     name_col = next((c for c in ["player","Player","player_name","Player_Name"] if c in player_df.columns), points_col)
 
-    # Restrict improvement calc to players on current manager's roster for current week
     manager_col = _find_manager_col(player_df)
     year_col = next((c for c in ["season_year","year","Year","season","Season"] if c in player_df.columns), None)
     if manager_col:
@@ -241,7 +235,6 @@ def display_player_weekly_recap(
     improvement_pool = player_df[player_df[name_col].astype(str).isin(current_names)] if current_names else player_df.iloc[0:0]
     improved_row = _compute_most_improved_two_week(improvement_pool, name_col, points_col)
 
-    # Manager-specific subset for other awards (uses only current season)
     subset = _filter_manager_year(player_df, manager, year)
     if subset.empty:
         st.info("No rows for selection.")
@@ -262,20 +255,25 @@ def display_player_weekly_recap(
     star_row = eligible.sort_values(points_col, ascending=False).iloc[0] if not eligible.empty else None
     dud_row = eligible.sort_values(points_col, ascending=True).iloc[0] if not eligible.empty else None
 
-    # What-If bench optimal
+    def _is_opt(v: Any) -> bool:
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, (int, float)) and not pd.isna(v):
+            return int(v) == 1
+        if isinstance(v, str):
+            return v.strip().lower() in {"1","true","yes","y","t"}
+        return False
+
     whatif_row = None
     if fantasy_pos_col and fantasy_pos_col in week_rows.columns:
         bench = week_rows[(week_rows[fantasy_pos_col] == "BN") & pd.notna(week_rows[points_col])].copy()
-        if "optimal_player" in bench.columns:
-            def _is_opt(v: Any) -> bool:
-                if isinstance(v, bool):
-                    return v
-                if isinstance(v, (int, float)) and not pd.isna(v):
-                    return int(v) == 1
-                if isinstance(v, str):
-                    return v.strip().lower() in {"1","true","yes","y","t"}
-                return False
-            bench = bench[bench["optimal_player"].apply(_is_opt)]
+        opt_col = None
+        for col in ["optimal_lineup", "optimal_lineup"]:
+            if col in bench.columns:
+                opt_col = col
+                break
+        if opt_col:
+            bench = bench[bench[opt_col].apply(_is_opt)]
         else:
             bench = bench.iloc[0:0]
         if not bench.empty:

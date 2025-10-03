@@ -7,12 +7,12 @@ class WeeklyAdvancedStatsViewer:
     def display(self, prefix=""):
         st.header("Weekly Advanced Stats")
         required_columns = [
-            'manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'win', 'is_playoffs',
+            'manager', 'week', 'year', 'opponent', 'team_points', 'opponent_points', 'win', 'is_playoffs',
             'margin', 'weekly_mean', 'weekly_median', 'total_matchup_score', 'teams_beat_this_week',
             'opponent_teams_beat_this_week', 'close_margin', 'above_league_median', 'below_league_median',
             'above_opponent_median', 'below_opponent_median', 'grade', 'gpa', 'league_weekly_mean',
             'league_weekly_median', 'personal_season_mean', 'personal_season_median', 'winning_streak',
-            'losing_streak', 'real_score', 'real_opponent_score', 'real_margin', 'real_total_matchup_score'
+            'losing_streak', 'real_score', 'real_opponent_points', 'real_margin', 'real_total_matchup_score'
         ]
 
         if all(col in self.df.columns for col in required_columns):
@@ -23,7 +23,7 @@ class WeeklyAdvancedStatsViewer:
                 'manager': 'Manager',
                 'opponent': 'Opponent',
                 'team_points': 'Team Points',
-                'opponent_score': 'Opp Pts',
+                'opponent_points': 'Opp Pts',
                 'win': 'Win',
                 'is_playoffs': 'Playoff Game',
                 'margin': 'Margin',
@@ -46,7 +46,7 @@ class WeeklyAdvancedStatsViewer:
                 'winning_streak': 'Winning Streak',
                 'losing_streak': 'Losing Streak',
                 'real_score': 'Real Score',
-                'real_opponent_score': 'Real Opponent Score',
+                'real_opponent_points': 'Real Opponent Score',
                 'real_margin': 'Real Margin',
                 'real_total_matchup_score': 'Real Total Matchup Score'
             })

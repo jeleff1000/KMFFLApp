@@ -7,18 +7,18 @@ class WeeklyProjectedStatsViewer:
     def display(self, prefix=""):
         st.header("Weekly Projected Stats")
         required_columns = [
-            'manager', 'opponent', 'team_points', 'opponent_score', 'team_projected_points',
+            'manager', 'opponent', 'team_points', 'opponent_points', 'team_projected_points',
             'opponent_projected_points', 'expected_odds', 'margin', 'expected_spread', 'week', 'year',
             'proj_score_error', 'abs_proj_score_error'
         ]
         if all(col in self.df.columns for col in required_columns):
-            self.df['win'] = self.df['team_points'] > self.df['opponent_score']
+            self.df['win'] = self.df['team_points'] > self.df['opponent_points']
             self.df['projected_wins'] = self.df['team_projected_points'] > self.df['opponent_projected_points']
             self.df['above_proj_score'] = self.df['team_points'] > self.df['team_projected_points']
-            self.df['win_vs_spread'] = (self.df['team_points'] - self.df['opponent_score']) > self.df['expected_spread']
+            self.df['win_vs_spread'] = (self.df['team_points'] - self.df['opponent_points']) > self.df['expected_spread']
 
             display_df = self.df[[
-                'manager', 'week', 'year', 'opponent', 'team_points', 'opponent_score', 'team_projected_points',
+                'manager', 'week', 'year', 'opponent', 'team_points', 'opponent_points', 'team_projected_points',
                 'opponent_projected_points', 'expected_odds', 'margin', 'expected_spread',
                 'win', 'projected_wins', 'above_proj_score', 'win_vs_spread',
                 'proj_score_error', 'abs_proj_score_error'
@@ -29,7 +29,7 @@ class WeeklyProjectedStatsViewer:
                 'year': 'Year',
                 'opponent': 'Opponent',
                 'team_points': 'Team Points',
-                'opponent_score': 'Opp Pts',
+                'opponent_points': 'Opp Pts',
                 'team_projected_points': 'Proj. Pts',
                 'opponent_projected_points': 'Opp Proj. Pts',
                 'expected_odds': 'Expected Odds',

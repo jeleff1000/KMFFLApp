@@ -6,7 +6,7 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
         merged_df = pd.merge(
             transaction_df[columns['transaction']],
             player_df[columns['player']],
-            left_on=['player_name', 'year'],   # normalized
+            left_on=['player_name', 'year'],
             right_on=['player', 'year'],
             how='left'
         )
@@ -14,7 +14,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
             merged_df['manager'] = 'Unknown'
         merged_df['manager'].fillna('Unknown', inplace=True)
 
-        # Ensure 'week' exists for season view
         if 'week' not in merged_df.columns:
             merged_df['week'] = 0
 
@@ -24,7 +23,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
                     .map(points_transaction_week).fillna(0).values
         )
 
-        # Max week cutoff logic
         max_week_up_to_16 = player_df[(player_df['week'] <= 16) & (player_df['year'] <= 2020)].groupby(['player', 'year'])['week'].idxmax()
         max_week_up_to_17 = player_df[(player_df['week'] <= 17) & (player_df['year'] >= 2021)].groupby(['player', 'year'])['week'].idxmax()
         points_max_week_up_to_16 = player_df.loc[max_week_up_to_16].set_index(['player', 'year'])['rolling_point_total']
@@ -41,7 +39,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
         return merged_df
 
     def get_season_add_drop_data(transaction_df, player_df):
-        # --- Minimal, inline normalization so the column subset doesn't KeyError ---
         if 'player_name' not in transaction_df.columns and 'name' in transaction_df.columns:
             transaction_df = transaction_df.rename(columns={'name': 'player_name'})
         if 'manager' not in transaction_df.columns:
@@ -49,11 +46,10 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
                 transaction_df = transaction_df.rename(columns={'nickname': 'manager'})
             else:
                 transaction_df['manager'] = 'Unknown'
-        # ----------------------------------------------------------------------------
 
         columns = {
             'transaction': ['transaction_id', 'player_name', 'year', 'transaction_type', 'faab_bid', 'manager'],
-            'player': ['player', 'year', 'rolling_point_total', 'position']
+            'player': ['player', 'year', 'rolling_point_total', 'yahoo_position']
         }
         merged_df = merge_and_calculate_points(transaction_df, player_df, columns)
 
@@ -92,7 +88,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
         ]]
 
     def get_season_trade_summary_data(transaction_df, player_df, draft_history_df):
-        # --- Same inline normalization for safety ---
         if 'player_name' not in transaction_df.columns and 'name' in transaction_df.columns:
             transaction_df = transaction_df.rename(columns={'name': 'player_name'})
         if 'manager' not in transaction_df.columns:
@@ -100,7 +95,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
                 transaction_df = transaction_df.rename(columns={'nickname': 'manager'})
             else:
                 transaction_df['manager'] = 'Unknown'
-        # Normalize draft columns if still raw
         if 'player_name' not in draft_history_df.columns and 'Name Full' in draft_history_df.columns:
             draft_history_df = draft_history_df.rename(columns={
                 'Name Full': 'player_name',
@@ -108,7 +102,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
                 'Cost': 'cost',
                 'Is Keeper Status': 'is_keeper_status'
             })
-        # ------------------------------------------------
 
         transaction_df['manager'].fillna('Unknown', inplace=True)
         transaction_df.drop_duplicates(subset=['transaction_id', 'player_name'], inplace=True)
@@ -125,15 +118,15 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
 
         columns = {
             'transaction': ['transaction_id', 'player_name', 'year', 'transaction_type', 'faab_bid', 'manager', 'cost', 'is_keeper_status'],
-            'player': ['player', 'year', 'rolling_point_total', 'position']
+            'player': ['player', 'year', 'rolling_point_total', 'yahoo_position']
         }
         merged_df = merge_and_calculate_points(trade_transactions, player_df, columns)
 
         merged_df['Rest_of_Season_Rank'] = (
-            merged_df.groupby('position')['points_week_max']
+            merged_df.groupby('yahoo_position')['points_week_max']
                      .rank(ascending=False, method='min').fillna(0).astype(int)
         )
-        merged_df['Rest_of_Season_Rank'] = merged_df['position'] + merged_df['Rest_of_Season_Rank'].astype(str)
+        merged_df['Rest_of_Season_Rank'] = merged_df['yahoo_position'] + merged_df['Rest_of_Season_Rank'].astype(str)
         merged_df.rename(columns={'faab_bid': 'faab'}, inplace=True)
         merged_df['Is Keeper'] = merged_df['is_keeper_status']
 
@@ -230,6 +223,6 @@ def display_season_all_transactions(transaction_df, player_df, draft_history_df)
     if added_player_search:
         filtered_df = filtered_df[filtered_df['added_player'].str.contains(added_player_search, case=False, na=False)]
     if dropped_player_search:
-        filtered_df = filtered_df[filtered_df['dropped_player'].str_contains(dropped_player_search, case=False, na=False)]
+        filtered_df = filtered_df[filtered_df['dropped_player'].str.contains(dropped_player_search, case=False, na=False)]
 
     st.dataframe(filtered_df, hide_index=True)

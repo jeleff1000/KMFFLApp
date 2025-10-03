@@ -1,4 +1,5 @@
 import streamlit as st
+import duckdb
 from .gavi_stat_viewer import GaviStatViewer
 from .opponent_gavi_stat_viewer import OpponentGaviStatViewer
 from .everyones_schedule_viewer import EveryonesScheduleViewer
@@ -8,11 +9,16 @@ from .playoff_odds import PlayoffOddsViewer
 from .expected_record_viewer import display_expected_record_and_seed
 from .predictive_record_and_seed import display_predicted_record_and_seed  # NEW IMPORT
 
-
 class SimulationDataViewer:
     def __init__(self, matchup_data_df, player_data_df):
         self.matchup_data_df = matchup_data_df
         self.player_data_df = player_data_df
+        self.con = duckdb.connect()
+        self.con.register('matchup_data', self.matchup_data_df)
+        self.con.register('player_data', self.player_data_df)
+
+    def query(self, sql):
+        return self.con.execute(sql).fetchdf()
 
     def display(self):
         if self.matchup_data_df is None:
@@ -62,7 +68,6 @@ class SimulationDataViewer:
                 PlayoffOddsViewer(self.matchup_data_df).display()
             elif predictive_choice == "Predicted Record + Seed":
                 display_predicted_record_and_seed(self.matchup_data_df)
-
 
 def display_simulations_viewer(matchup_data_df, player_data_df):
     SimulationDataViewer(matchup_data_df, player_data_df).display()

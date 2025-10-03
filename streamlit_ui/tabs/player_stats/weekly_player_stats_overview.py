@@ -69,12 +69,12 @@ class StreamlitWeeklyPlayerDataViewer:
                     selected_filters["manager"] = [manager for manager in self.get_unique_values("manager") if
                                                  manager != "No manager"]
 
-            # Second row: Position and fantasy_position filters
+            # Second row: NFL Position and fantasy_position filters
             col1, col2, col3 = st.columns([1, 1, 1])
             with col1:
-                position_values = st.multiselect("Select Position",
-                                                 self.get_unique_values("position"),
-                                                 key=f"position_value_{tab_index}")
+                nfl_position_values = st.multiselect("Select NFL Position",
+                                                     self.get_unique_values("nfl_position"),
+                                                     key=f"nfl_position_value_{tab_index}")
             with col2:
                 fantasy_position_values = st.multiselect("Select fantasy_position",
                                                          self.get_unique_values("fantasy_position"),
@@ -82,7 +82,7 @@ class StreamlitWeeklyPlayerDataViewer:
             with col3:
                 st.markdown("<div style='height: 2em;'></div>", unsafe_allow_html=True)
                 show_started = st.toggle("Started", value=False, key=f"show_started_{tab_index}")
-            selected_filters["position"] = position_values
+            selected_filters["nfl_position"] = nfl_position_values
             selected_filters["fantasy_position"] = fantasy_position_values
 
             # Filter out players with fantasy_position BN or IR if toggle is on
@@ -94,11 +94,11 @@ class StreamlitWeeklyPlayerDataViewer:
                                                             self.get_unique_values("fantasy_position")
                                                             if pos not in ["BN", "IR"]]
 
-            # Third row: Team, opponent_team, Week, and Year filters
+            # Third row: NFL Team, opponent_team, Week, and Year filters
             col1, col2, col3, col4 = st.columns(4)
             with col1:
-                team_values = st.multiselect("Select Team", self.get_unique_values("team"),
-                                             key=f"team_value_{tab_index}")
+                nfl_team_values = st.multiselect("Select NFL Team", self.get_unique_values("nfl_team"),
+                                                 key=f"nfl_team_value_{tab_index}")
             with col2:
                 opponent_team_values = st.multiselect("Select opponent_team",
                                                       self.get_unique_values("opponent_team"),
@@ -109,7 +109,7 @@ class StreamlitWeeklyPlayerDataViewer:
             with col4:
                 year_values = st.multiselect("Select Year", self.get_unique_values("year"),
                                              key=f"year_value_{tab_index}")
-            selected_filters["team"] = team_values
+            selected_filters["nfl_team"] = nfl_team_values
             selected_filters["opponent_team"] = opponent_team_values
             selected_filters["week"] = week_values
             selected_filters["year"] = year_values

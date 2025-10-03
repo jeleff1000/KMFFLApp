@@ -54,7 +54,7 @@ class CombinedMatchupStatsViewer:
             # Create display DataFrame
             display_df = merged_data[
                 ['player', 'points', 'manager', 'week', 'year', 'fantasy_position', 'opponent', 'team_points',
-                 'opponent_score', 'win', 'is_playoffs_check', 'started', 'optimal_player']
+                 'opponent_points', 'win', 'is_playoffs_check', 'started', 'optimal_player']
             ].copy()
             display_df['year'] = display_df['year'].astype(str)
             display_df['week'] = display_df['week'].astype(int)

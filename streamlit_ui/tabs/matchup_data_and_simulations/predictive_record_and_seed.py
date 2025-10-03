@@ -1,7 +1,14 @@
 import re
 import pandas as pd
 import streamlit as st
+import duckdb
 
+def duckdb_filter(df, sql):
+    con = duckdb.connect()
+    con.register('base_df', df)
+    result = con.execute(sql).fetchdf()
+    con.close()
+    return result
 
 def _pred_select_week(base_df: pd.DataFrame):
     mode = st.radio("Selection Mode", ["Today's Date", "Specific Week"],
@@ -26,14 +33,15 @@ def _pred_select_week(base_df: pd.DataFrame):
         week = int(week_choice)
     return year, week
 
-
 def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
-    week_slice = base_df[(base_df['year'] == year) & (base_df['week'] == week)]
+    week_slice = duckdb_filter(
+        base_df,
+        f"SELECT * FROM base_df WHERE year={year} AND week={week}"
+    )
     if week_slice.empty:
         st.info("No rows for selected year/week.")
         return
 
-    # Collect all x<number>_win columns
     win_meta = []
     for c in week_slice.columns:
         m = re.fullmatch(r"x(\d+)_win", c)
@@ -45,11 +53,8 @@ def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
         return
 
     season_len = max(k for k, _ in win_meta)
-
-    # Sort descending by wins so records display 14-0, 13-1, ...
     win_meta.sort(key=lambda t: t[0], reverse=True)
     ordered_win_cols = [c for _, c in win_meta]
-
     needed = ['manager'] + ordered_win_cols
     needed = [c for c in needed if c in week_slice.columns]
 
@@ -58,14 +63,10 @@ def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
           .set_index('manager')
           .sort_index())
 
-    # Rename xK_win -> K-(season_len-K)
     rename_map = {c: f"{k}-{season_len - k}" for k, c in win_meta}
     df = df.rename(columns=rename_map)
-
-    # Order already descending by wins
     df = df[list(rename_map.values())]
 
-    # Style
     styled = (df.style
               .background_gradient(cmap='PuBuGn', axis=1)
               .format(precision=2, na_rep=""))
@@ -75,9 +76,11 @@ def _pred_render_expected_record(base_df: pd.DataFrame, year: int, week: int):
                 unsafe_allow_html=True)
     st.dataframe(styled, use_container_width=True)
 
-
 def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
-    week_df = base_df[(base_df['year'] == year) & (base_df['week'] == week)]
+    week_df = duckdb_filter(
+        base_df,
+        f"SELECT * FROM base_df WHERE year={year} AND week={week}"
+    )
     if week_df.empty:
         st.info("No rows for selected year/week.")
         return
@@ -96,7 +99,6 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
         return
 
     seed_cols = sorted(seed_cols, key=lambda c: week_number_map[c])
-
     cols = ['manager'] + seed_cols
     cols = [c for c in cols if c in week_df.columns]
     df = (week_df[cols]
@@ -112,7 +114,6 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
         df = df.join(actual_seed)
 
     df[seed_cols] = df[seed_cols].apply(pd.to_numeric, errors='coerce')
-
     bye_source = [c for c in seed_cols if week_number_map[c] in (1, 2)]
     playoff_source = [c for c in seed_cols if week_number_map[c] <= 6]
 
@@ -121,7 +122,6 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
 
     rename_map = {c: str(week_number_map[c]) for c in seed_cols}
     df = df.rename(columns=rename_map)
-
     iteration_cols = sorted(rename_map.values(), key=lambda x: int(x))
     ordered = iteration_cols + ['Bye%', 'Playoff%']
     if 'Actual Seed' in df.columns:
@@ -131,7 +131,6 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
 
     numeric_percent_cols = iteration_cols + ['Bye%', 'Playoff%']
     df[numeric_percent_cols] = df[numeric_percent_cols].round(2)
-
     fmt = {c: '{:.2f}%' for c in numeric_percent_cols}
     if 'Actual Seed' in df.columns:
         fmt['Actual Seed'] = '{:.0f}'
@@ -144,15 +143,14 @@ def _pred_render_expected_seed(base_df: pd.DataFrame, year: int, week: int):
                 unsafe_allow_html=True)
     st.dataframe(styled, use_container_width=True)
 
-
 def display_predicted_record_and_seed(matchup_data_df: pd.DataFrame):
     if matchup_data_df is None or matchup_data_df.empty:
         st.write("No data available")
         return
-    base_df = matchup_data_df[
-        (matchup_data_df['is_playoffs'] == 0) &
-        (matchup_data_df['is_consolation'] == 0)
-    ].copy()
+    base_df = duckdb_filter(
+        matchup_data_df,
+        "SELECT * FROM base_df WHERE is_playoffs=0 AND is_consolation=0"
+    )
     if base_df.empty:
         st.write("No regular season data available")
         return

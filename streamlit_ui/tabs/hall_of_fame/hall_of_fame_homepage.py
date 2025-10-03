@@ -10,7 +10,7 @@ class HallOfFameViewer:
         matchup_data = self.df_dict.get("Matchup Data")
         if matchup_data is not None:
             required_columns = [
-                'team_points', 'opponent_score', 'final_wins', 'final_losses',
+                'team_points', 'opponent_points', 'final_wins', 'final_losses',
                 'team_projected_points', 'opponent_projected_points', 'personal_season_mean',
                 'manager', 'opponent', 'year', 'champion', 'championship', 'win'
             ]
@@ -18,7 +18,7 @@ class HallOfFameViewer:
                 champions_df = matchup_data[
                     (matchup_data['championship'] == 1) & (matchup_data['champion'] == 1)
                 ].copy()
-                champions_df['Score'] = champions_df['team_points'].astype(str) + ' - ' + champions_df['opponent_score'].astype(str)
+                champions_df['Score'] = champions_df['team_points'].astype(str) + ' - ' + champions_df['opponent_points'].astype(str)
                 champions_df['Record'] = champions_df['final_wins'].astype(str) + ' - ' + champions_df['final_losses'].astype(str)
                 champions_df['Projected Score'] = champions_df['team_projected_points'].astype(str) + ' - ' + champions_df['opponent_projected_points'].astype(str)
                 champions_df.rename(

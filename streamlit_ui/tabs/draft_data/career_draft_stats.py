@@ -27,10 +27,10 @@ def display_career_draft(draft_data):
         team_managers = sorted(draft_data['manager'].unique().tolist())
         selected_team_managers = st.multiselect("Select Manager", options=team_managers, default=[], key='manager')
     with col2:
-        primary_positions = sorted(draft_data['primary_position'].unique().tolist())
+        primary_positions = sorted([pos for pos in draft_data['primary_position'].unique().tolist() if pos is not None])
         selected_primary_positions = st.multiselect("Select Primary Position", options=primary_positions, default=[], key='primary_position')
 
-    names_full = sorted(draft_data['player_name'].unique().tolist())
+    names_full = sorted([name for name in draft_data['player_name'].unique().tolist() if name is not None])
     selected_names_full = st.multiselect("Search Player Name", options=names_full, default=[], key='player_name')
 
     if selected_team_managers:

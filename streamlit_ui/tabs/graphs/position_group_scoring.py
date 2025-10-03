@@ -13,8 +13,9 @@ def display_position_group_scoring_graphs(df_dict, prefix=""):
         filtered = player_data[player_data["manager"] != "No manager"].copy()
         filtered["year"] = filtered["year"].astype(str)
 
-        # Manager dropdown only
-        managers = sorted(filtered["manager"].unique())
+        # Manager dropdown only (fix: filter out None values)
+        managers = [m for m in filtered["manager"].unique() if m is not None]
+        managers = sorted(managers)
         manager = st.selectbox("Select Manager", ["All Managers"] + managers, key=f"{prefix}_manager")
         if manager != "All Managers":
             filtered = filtered[filtered["manager"] == manager]

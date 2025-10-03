@@ -51,7 +51,7 @@ class H2HViewer:
             # Create display DataFrame
             display_df = merged_data[
                 ['player', 'points', 'Manager', 'week', 'year', 'fantasy position', 'opponent', 'team_points',
-                 'opponent_score', 'win', 'is_playoffs_check', 'started', 'optimal_player']
+                 'opponent_points', 'win', 'is_playoffs_check', 'started', 'optimal_player']
             ]
             display_df['year'] = display_df['year'].astype(str)
             display_df = display_df.sort_values(by=['year', 'week', 'fantasy position']).reset_index(drop=True)

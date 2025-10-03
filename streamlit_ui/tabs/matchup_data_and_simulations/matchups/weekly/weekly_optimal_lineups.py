@@ -9,7 +9,7 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
     merged_df = merged_df[merged_df['manager'].notna()]
 
     # Keep only the specified columns
-    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_score', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
+    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_points', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
     filtered_df = merged_df[columns_to_keep]
 
     # Create a new column that sums the points when optimal_player is 1
@@ -20,7 +20,7 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
         'team_points': 'first',
         'win': 'first',
         'loss': 'first',
-        'opponent_score': 'first',
+        'opponent_points': 'first',
         'points': 'sum',
         'optimal_points_sum': 'first',
         'is_playoffs': 'first',
@@ -58,7 +58,7 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
     aggregated_df['lost_points'] = aggregated_df['optimal_points'] - aggregated_df['team_points']
 
     # Reorder columns
-    aggregated_df = aggregated_df[['manager', 'week', 'year', 'opponent', 'team_points', 'optimal_points', 'lost_points', 'win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_score', 'opponent_optimal']]
+    aggregated_df = aggregated_df[['manager', 'week', 'year', 'opponent', 'team_points', 'optimal_points', 'lost_points', 'win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_points', 'opponent_optimal']]
 
     # Rename columns
     aggregated_df = aggregated_df.rename(columns={
@@ -72,7 +72,7 @@ def display_weekly_optimal_lineup(matchup_df, player_df):
         'loss': 'Loss',
         'optimal_win': 'Optimal Win',
         'optimal_loss': 'Optimal Loss',
-        'opponent_score': 'Opp Pts',
+        'opponent_points': 'Opp Pts',
         'opponent_optimal': 'Opp Optimal'
     })
 

@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 from typing import Dict, List
 import pandas as pd
 import streamlit as st
-
 
 class WeeklyTeamRatingsViewer:
     """
@@ -18,7 +16,7 @@ class WeeklyTeamRatingsViewer:
 
         # Known numeric columns for coercion/formatting
         self.numeric_cols: List[str] = [
-            "team_points", "win", "loss", "opponent_score",
+            "team_points", "win", "loss", "opponent_points",
             "avg_seed", "p_playoffs", "p_bye", "exp_final_wins",
             "p_semis", "p_final", "p_champ",
             "x1_seed", "shuffle_1_seed", "shuffle_avg_wins",
@@ -38,10 +36,9 @@ class WeeklyTeamRatingsViewer:
         # Columns to hide from display
         self.hidden_cols: List[str] = ["Opponent Week", "OpponentYear"]
 
-        # Leading order you requested
+        # Leading order: manager first
         self.leading_order: List[str] = [
-            "Manager", "week", "year", "win", "loss",
-            "team_points", "opponent", "opponent_score", "power_rating", "power rating",
+            "manager", "week", "year", "team_points", "power_rating", "power rating",
         ]
 
         # Remaining original columns (excluding hidden ones)
@@ -67,7 +64,7 @@ class WeeklyTeamRatingsViewer:
             st.info("No data available.")
             return
 
-        # Internal sort: power\_rating -> power rating -> team\_points
+        # Internal sort: power_rating -> power rating -> team_points
         sort_candidates = ["power_rating", "power rating", "team_points"]
         sort_col = next((c for c in sort_candidates if c in self.base_df.columns), None)
 
@@ -100,7 +97,7 @@ class WeeklyTeamRatingsViewer:
             if c in df_show.columns:
                 column_config[c] = st.column_config.NumberColumn(c, format="%.2f")
         for c in ["win", "loss", "wins_vs_shuffle_wins", "shuffle_1_seed", "seed_vs_shuffle_seed",
-                  "opponent_score", "week", "year"]:
+                  "opponent_points", "week", "year"]:
             if c in df_show.columns:
                 column_config[c] = st.column_config.NumberColumn(c, format="%d")
 

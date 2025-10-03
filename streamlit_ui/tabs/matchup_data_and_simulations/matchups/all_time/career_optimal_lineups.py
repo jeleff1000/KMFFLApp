@@ -9,7 +9,7 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
     merged_df = merged_df[merged_df['manager'].notna()]
 
     # Keep only the specified columns
-    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_score', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
+    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_points', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
     filtered_df = merged_df[columns_to_keep]
 
     # Create a new column that sums the points when optimal_player is 1
@@ -20,7 +20,7 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
         'team_points': 'first',
         'win': 'first',
         'loss': 'first',
-        'opponent_score': 'first',
+        'opponent_points': 'first',
         'points': 'sum',
         'optimal_points_sum': 'first',
         'is_playoffs': 'first',
@@ -56,7 +56,7 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
     aggregated_df['lost_points'] = aggregated_df['optimal_points'] - aggregated_df['team_points']
 
     # Reorder columns
-    aggregated_df = aggregated_df[['manager', 'week', 'year', 'opponent', 'win', 'loss', 'optimal_win', 'optimal_loss', 'team_points', 'optimal_points', 'lost_points', 'opponent_score', 'opponent_optimal', 'is_playoffs', 'is_consolation']]
+    aggregated_df = aggregated_df[['manager', 'week', 'year', 'opponent', 'win', 'loss', 'optimal_win', 'optimal_loss', 'team_points', 'optimal_points', 'lost_points', 'opponent_points', 'opponent_optimal', 'is_playoffs', 'is_consolation']]
 
     # Aggregate the data on manager
     career_aggregated_df = aggregated_df.groupby(['manager']).agg({
@@ -67,7 +67,7 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
         'team_points': 'sum',
         'optimal_points': 'sum',
         'lost_points': 'sum',
-        'opponent_score': 'sum',
+        'opponent_points': 'sum',
         'opponent_optimal': 'sum'
     }).reset_index()
 
@@ -80,7 +80,7 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
         career_aggregated_df = pd.merge(career_aggregated_df, num_games, on='manager')
 
         # Divide relevant columns by the number of games and round to 2 decimals
-        for col in ['win', 'loss', 'optimal_win', 'optimal_loss', 'team_points', 'optimal_points', 'lost_points', 'opponent_score', 'opponent_optimal']:
+        for col in ['win', 'loss', 'optimal_win', 'optimal_loss', 'team_points', 'optimal_points', 'lost_points', 'opponent_points', 'opponent_optimal']:
             career_aggregated_df[col] = (career_aggregated_df[col] / career_aggregated_df['num_games']).round(2)
 
         # Drop the num_games column
@@ -96,7 +96,7 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
         'team_points': 'PF',
         'optimal_points': 'Optimal PF',
         'lost_points': 'Lost Points',
-        'opponent_score': 'PA',
+        'opponent_points': 'PA',
         'opponent_optimal': 'Optimal PA'
     })
 

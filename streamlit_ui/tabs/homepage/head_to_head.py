@@ -1,3 +1,4 @@
+import duckdb
 import pandas as pd
 import streamlit as st
 
@@ -13,19 +14,39 @@ class H2HViewer:
             raise KeyError("The required column 'matchup_name' is missing in filtered_data.")
 
     def display(self, prefix):
-        self.filtered_data['year'] = self.filtered_data['year'].fillna(0).astype(int)
-        self.matchup_data['year'] = self.matchup_data['year'].fillna(0).astype(int)
+        # Normalize types
+        self.filtered_data['year'] = pd.to_numeric(self.filtered_data['year'], errors='coerce').fillna(0).astype(int)
+        self.matchup_data['year']  = pd.to_numeric(self.matchup_data['year'],  errors='coerce').fillna(0).astype(int)
 
-        merged_data = pd.merge(
-            self.filtered_data,
-            self.matchup_data,
-            left_on=['manager', 'week', 'year', 'opponent'],
-            right_on=['manager', 'week', 'year', 'opponent'],
-            how='inner'
-        )
+        self.filtered_data['week'] = pd.to_numeric(self.filtered_data['week'], errors='coerce')
+        self.matchup_data['week']  = pd.to_numeric(self.matchup_data['week'],  errors='coerce')
+
+        # Optional: unify team_name if matchup_data has 'team' instead
+        mcols = {c.lower(): c for c in self.matchup_data.columns}
+        if 'team_name' not in mcols and 'team' in mcols:
+            self.matchup_data = self.matchup_data.rename(columns={mcols['team']: 'team_name'})
+
+        # DuckDB connection
+        con = duckdb.connect()
+        con.register('filtered', self.filtered_data)
+        con.register('matchup', self.matchup_data)
+
+        # Join on keys, but take team_1 / team_2 from filtered (source of truth here)
+        merged_data = con.execute("""
+            SELECT
+                f.*,
+                f.team_1 AS team_1,
+                f.team_2 AS team_2
+            FROM filtered f
+            INNER JOIN matchup m
+              ON f.manager  = m.manager
+             AND f.opponent = m.opponent
+             AND f.week     = m.week
+             AND f.year     = m.year
+        """).df()
 
         required_cols = [
-            'team_1', 'team_2', 'lineup_position', 'player', 'points',
+            'team_1', 'team_2', 'player', 'points',
             'fantasy_position', 'manager', 'headshot_url'
         ]
         if all(col in merged_data.columns for col in required_cols):
@@ -34,61 +55,58 @@ class H2HViewer:
             team_1 = merged_data['team_1'].iloc[0]
             team_2 = merged_data['team_2'].iloc[0]
 
-            team_1_data = merged_data[merged_data['manager'] == team_1][
-                ['team_1', 'lineup_position', 'player', 'points', 'fantasy_position', 'headshot_url']
-            ].rename(columns={'player': 'player_1', 'points': 'points_1', 'headshot_url': 'headshot_url_1'})
-
-            team_2_data = merged_data[merged_data['manager'] == team_2][
-                ['team_2', 'lineup_position', 'player', 'points', 'headshot_url']
-            ].rename(columns={'player': 'player_2', 'points': 'points_2', 'headshot_url': 'headshot_url_2'})
-
-            team_1_data['headshot_url_1'] = team_1_data['headshot_url_1'].fillna(default_image_url)
-            team_2_data['headshot_url_2'] = team_2_data['headshot_url_2'].fillna(default_image_url)
-
-            display_df = pd.merge(
-                team_1_data,
-                team_2_data,
-                on='lineup_position',
-                how='outer'
-            )
-
-            position_order = {
-                'QB1': 1, 'RB1': 2, 'RB2': 3, 'WR1': 4, 'WR2': 5, 'WR3': 6,
-                'TE1': 7, 'W/R/T1': 8, 'K1': 9, 'DEF1': 10
-            }
-
-            for position in position_order.keys():
-                if position not in display_df['lineup_position'].values:
-                    display_df = pd.concat([display_df, pd.DataFrame([{
-                        'lineup_position': position,
-                        'team_1': 'N/A',
-                        'player_1': 'N/A',
-                        'points_1': 0,
-                        'fantasy_position': 'N/A',
-                        'headshot_url_1': default_image_url,
-                        'team_2': 'N/A',
-                        'player_2': 'N/A',
-                        'points_2': 0,
-                        'headshot_url_2': default_image_url
-                    }])], ignore_index=True)
-
-            display_df['position_order'] = display_df['lineup_position'].map(position_order)
-            display_df = display_df.sort_values(by=['position_order']).drop(columns=['position_order']).reset_index(drop=True)
-
-            display_df['margin_1'] = (display_df['points_1'] - display_df['points_2']).round(2)
-            display_df['margin_2'] = (display_df['points_2'] - display_df['points_1']).round(2)
-
-            display_df['points_1'] = display_df['points_1'].round(2)
-            display_df['points_2'] = display_df['points_2'].round(2)
-
-            team_1_name = display_df['team_1'].iloc[0] if not display_df['team_1'].isna().all() else "Team 1"
-            team_2_name = display_df['team_2'].iloc[0] if not display_df['team_2'].isna().all() else "Team 2"
-
-            main_positions = ['QB', 'RB', 'WR', 'TE', 'W/R/T', 'K', 'DEF']
+            position_order = ['QB', 'RB', 'WR', 'TE', 'W/R/T', 'K', 'DEF']
             bench_ir_positions = ['BN', 'IR']
 
-            main_df = display_df[display_df['fantasy_position'].isin(main_positions)].reset_index(drop=True)
-            bench_ir_df = display_df[display_df['fantasy_position'].isin(bench_ir_positions)].reset_index(drop=True)
+            def prepare_team_duckdb(df, manager, team_col, player_col, points_col, fantasy_pos_col, headshot_col, positions):
+                con.register('team_df', df)
+                pos_order_map = {pos: i for i, pos in enumerate(positions)}
+                pos_order_case = "CASE " + " ".join([f"WHEN {fantasy_pos_col}='{pos}' THEN {i}" for pos, i in pos_order_map.items()]) + " ELSE 999 END"
+                query = f"""
+                    SELECT
+                        {team_col},
+                        {fantasy_pos_col},
+                        {player_col},
+                        {points_col},
+                        COALESCE(NULLIF({headshot_col}, ''), '{default_image_url}') AS {headshot_col},
+                        ROW_NUMBER() OVER (PARTITION BY {fantasy_pos_col} ORDER BY {points_col} DESC) - 1 AS slot
+                    FROM team_df
+                    WHERE manager = '{manager}'
+                      AND {fantasy_pos_col} IN ({','.join([f"'{p}'" for p in positions])})
+                    ORDER BY {pos_order_case}, {points_col} DESC
+                """
+                return con.execute(query).df()
+
+            # Main positions
+            team_1_main = prepare_team_duckdb(
+                merged_data, team_1, 'team_1', 'player', 'points', 'fantasy_position', 'headshot_url', position_order
+            ).rename(columns={'player': 'player_1', 'points': 'points_1', 'headshot_url': 'headshot_url_1'})
+            team_2_main = prepare_team_duckdb(
+                merged_data, team_2, 'team_2', 'player', 'points', 'fantasy_position', 'headshot_url', position_order
+            ).rename(columns={'player': 'player_2', 'points': 'points_2', 'headshot_url': 'headshot_url_2'})
+
+            con.register('team_1_main', team_1_main)
+            con.register('team_2_main', team_2_main)
+            main_df = con.execute("""
+                SELECT
+                    t1.*,
+                    t2.player_2, t2.points_2, t2.headshot_url_2, t2.team_2
+                FROM team_1_main t1
+                FULL OUTER JOIN team_2_main t2
+                  ON t1.fantasy_position = t2.fantasy_position
+                 AND t1.slot = t2.slot
+            """).df()
+
+            main_df['points_1'] = main_df['points_1'].fillna(0).round(2)
+            main_df['points_2'] = main_df['points_2'].fillna(0).round(2)
+            main_df['margin_1'] = (main_df['points_1'] - main_df['points_2']).round(2)
+            main_df['margin_2'] = (main_df['points_2'] - main_df['points_1']).round(2)
+
+            team_1_name = main_df['team_1'].iloc[0] if not main_df['team_1'].isna().all() else "Team 1"
+            team_2_name = main_df['team_2'].iloc[0] if not main_df['team_2'].isna().all() else "Team 2"
+
+            main_df['position_order'] = main_df['fantasy_position'].map({pos: i for i, pos in enumerate(position_order)})
+            main_df = main_df.sort_values(['position_order', 'slot']).drop(columns=['position_order']).reset_index(drop=True)
 
             total_points_1 = main_df['points_1'].sum()
             total_points_2 = main_df['points_2'].sum()
@@ -103,10 +121,37 @@ class H2HViewer:
             }
             main_df = pd.concat([main_df, pd.DataFrame([total_row])], ignore_index=True)
 
+            # Bench/IR positions
+            team_1_bench = prepare_team_duckdb(
+                merged_data, team_1, 'team_1', 'player', 'points', 'fantasy_position', 'headshot_url', bench_ir_positions
+            ).rename(columns={'player': 'player_1', 'points': 'points_1', 'headshot_url': 'headshot_url_1'})
+            team_2_bench = prepare_team_duckdb(
+                merged_data, team_2, 'team_2', 'player', 'points', 'fantasy_position', 'headshot_url', bench_ir_positions
+            ).rename(columns={'player': 'player_2', 'points': 'points_2', 'headshot_url': 'headshot_url_2'})
+
+            con.register('team_1_bench', team_1_bench)
+            con.register('team_2_bench', team_2_bench)
+            bench_ir_df = con.execute("""
+                SELECT
+                    t1.*,
+                    t2.player_2, t2.points_2, t2.headshot_url_2, t2.team_2
+                FROM team_1_bench t1
+                FULL OUTER JOIN team_2_bench t2
+                  ON t1.fantasy_position = t2.fantasy_position
+                 AND t1.slot = t2.slot
+            """).df()
+
+            bench_ir_df['points_1'] = bench_ir_df['points_1'].fillna(0).round(2)
+            bench_ir_df['points_2'] = bench_ir_df['points_2'].fillna(0).round(2)
+            bench_ir_df['margin_1'] = (bench_ir_df['points_1'] - bench_ir_df['points_2']).round(2)
+            bench_ir_df['margin_2'] = (bench_ir_df['points_2'] - bench_ir_df['points_1']).round(2)
+            bench_ir_df = bench_ir_df.sort_values(['fantasy_position', 'slot']).reset_index(drop=True)
+
             self.render_table(main_df, team_1_name, team_2_name, color_coding=True)
             self.render_table(bench_ir_df, team_1_name, team_2_name, color_coding=False)
         else:
-            st.write("The required columns are not available in the data.")
+            missing = [c for c in required_cols if c not in merged_data.columns]
+            st.write(f"The required columns are not available in the data. Missing: {missing}")
 
     def render_table(self, df, team_1_name, team_2_name, color_coding):
         st.markdown(
@@ -171,15 +216,19 @@ class H2HViewer:
         table_html += "</tbody></table>"
         st.markdown(table_html, unsafe_allow_html=True)
 
+
 def filter_h2h_data(player_data, year, week, matchup_name):
-    df = player_data.copy()
-    if year is not None:
-        df = df[df['year'] == int(year)]
-    if week is not None:
-        df = df[df['week'] == int(week)]
-    if matchup_name is not None:
-        df = df[df['matchup_name'] == matchup_name]
-    return df
+    con = duckdb.connect()
+    con.register('player_data', player_data)
+    query = f"""
+        SELECT *
+        FROM player_data
+        WHERE year = {int(year)}
+          AND week = {int(week)}
+          AND matchup_name = '{matchup_name.replace("'", "''")}'
+    """
+    return con.execute(query).df()
+
 
 def display_head_to_head(df_dict):
     player_data = df_dict.get("Player Data")
@@ -197,13 +246,21 @@ def display_head_to_head(df_dict):
     matchup_data['year'] = pd.to_numeric(matchup_data['year'], errors='coerce')
     matchup_data['week'] = pd.to_numeric(matchup_data['week'], errors='coerce')
 
-    pd_pairs = player_data[['year', 'week']].dropna().drop_duplicates()
-    md_pairs = matchup_data.rename(columns={'year': 'year'})[['year', 'week']].dropna().drop_duplicates()
-    avail_pairs = (
-        pd.merge(pd_pairs, md_pairs, on=['year', 'week'], how='inner')
-        .drop_duplicates()
-        .sort_values(['year', 'week'])
-    )
+    con = duckdb.connect()
+    con.register('player_data', player_data)
+    con.register('matchup_data', matchup_data)
+    pd_pairs = con.execute("""
+        SELECT DISTINCT year, week
+        FROM player_data
+        WHERE year IS NOT NULL AND week IS NOT NULL
+    """).df()
+    md_pairs = con.execute("""
+        SELECT DISTINCT year, week
+        FROM matchup_data
+        WHERE year IS NOT NULL AND week IS NOT NULL
+    """).df()
+    avail_pairs = pd.merge(pd_pairs, md_pairs, on=['year', 'week'], how='inner') \
+                    .drop_duplicates().sort_values(['year', 'week'])
 
     if avail_pairs.empty:
         st.write("No overlapping year/week combinations in Player Data and Matchup Data.")

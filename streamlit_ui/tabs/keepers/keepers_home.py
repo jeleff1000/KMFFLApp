@@ -9,7 +9,7 @@ class KeeperDataViewer:
         df = self.keeper_data.copy()
         df['year'] = df['year'].astype(str)  # Ensure year is a string
         df = df[df['manager'] != 'No manager']
-        df = df[~df['position'].isin(['DEF', 'K'])]
+        df = df[~df['yahoo_position'].isin(['DEF', 'K'])]
         df['manager'] = df['manager'].astype(str)
 
         # Filter to only the largest week in each year
@@ -35,7 +35,7 @@ class KeeperDataViewer:
                 df = df[df['year'].isin(selected_years)]
 
             columns_to_display = [
-                'player', 'kept_next_year', 'Is Keeper Status', 'keeper_price', 'team', 'manager', 'position', 'year',
+                'player', 'kept_next_year', 'Is Keeper Status', 'keeper_price', 'team', 'manager', 'yahoo_position', 'year',
                 'avg_points_this_year', 'avg_points_next_year', 'avg_$_next_year',
                 'cost', 'faab_bid', 'total_points_next_year'
             ]

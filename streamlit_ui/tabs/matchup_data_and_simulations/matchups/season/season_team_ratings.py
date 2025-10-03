@@ -10,7 +10,7 @@ class SeasonTeamRatingsViewer:
     Season-level Streamlit viewer for team ratings.
     - Aggregates weekly rows by [manager, year].
     - Hides `week` and `opponent`.
-    - Leading order: manager, year, win, loss, team_points, opponent_score, power_rating, power rating.
+    - Leading order: manager, year, win, loss, team_points, opponent_points, power_rating, power rating.
     - Shows only known original columns (no extras).
     - No download button.
     """
@@ -20,7 +20,7 @@ class SeasonTeamRatingsViewer:
 
         # Coerce numerics where applicable
         self.numeric_cols: List[str] = [
-            "team_points", "win", "loss", "opponent_score",
+            "team_points", "win", "loss", "opponent_points",
             "avg_seed", "p_playoffs", "p_bye", "exp_final_wins",
             "p_semis", "p_final", "p_champ",
             "x1_seed", "Final Playoff Seed",
@@ -40,7 +40,7 @@ class SeasonTeamRatingsViewer:
         # Leading display order (season)
         self.leading_order: List[str] = [
             "manager", "year", "win", "loss",
-            "team_points", "opponent_score", "power_rating", "power rating",
+            "team_points", "opponent_points", "power_rating", "power rating",
         ]
 
         # Remaining original known columns (do not append unknowns)
@@ -90,7 +90,7 @@ class SeasonTeamRatingsViewer:
 
         # Means (season averages)
         mean_cols = [c for c in [
-            "team_points", "opponent_score", "power_rating", "power rating",
+            "team_points", "opponent_points", "power_rating", "power rating",
             "exp_final_wins", "avg_seed",
             "p_playoffs", "p_bye", "p_semis", "p_final", "p_champ",
         ] if c in present]
@@ -166,7 +166,7 @@ class SeasonTeamRatingsViewer:
             if c in df_show.columns:
                 column_config[c] = st.column_config.NumberColumn(c, format="%.2f")
         for c in ["win", "loss", "wins_vs_shuffle_wins", "shuffle_1_seed", "seed_vs_shuffle_seed",
-                  "opponent_score", "year", "Final Playoff Seed"]:
+                  "opponent_points", "year", "Final Playoff Seed"]:
             if c in df_show.columns:
                 column_config[c] = st.column_config.NumberColumn(c, format="%d")
 

@@ -5,7 +5,7 @@ def get_advanced_stats(player_data):
         fantasy_position = group['fantasy_position'].iloc[0] if 'fantasy_position' in group.columns else None
         if fantasy_position == 'QB':
             columns = [
-                'player', 'team', 'week', 'year', 'manager', 'points', 'position',
+                'player', 'nfl_team', 'week', 'year', 'manager', 'points', 'nfl_position',
                 'Pass Yds', 'Pass TD', 'completions', 'attempts', 'Int', 'sack_yards',
                 'sack_fumbles', 'passing_2pt_conversions', 'passing_air_yards',
                 'passing_yards_after_catch', 'passing_first_downs', 'passing_epa',
@@ -14,7 +14,7 @@ def get_advanced_stats(player_data):
             ]
         elif fantasy_position == 'RB':
             columns = [
-                'player', 'team', 'week', 'year', 'manager', 'points', 'position',
+                'player', 'nfl_team', 'week', 'year', 'manager', 'points', 'nfl_position',
                 'Rush Yds', 'Rush Att', 'Rush TD', 'rushing_fumbles', 'rushing_fumbles_lost',
                 'rushing_first_downs', 'rushing_epa', 'Rec', 'Rec Yds',
                 'Rec TD', 'Targets', 'receiving_fumbles', 'receiving_fumbles_lost', 'receiving_first_downs',
@@ -23,7 +23,7 @@ def get_advanced_stats(player_data):
             ]
         elif fantasy_position in ['WR', 'TE']:
             columns = [
-                'player', 'team', 'week', 'year', 'manager', 'points', 'position',
+                'player', 'nfl_team', 'week', 'year', 'manager', 'points', 'nfl_position',
                 'Rec', 'Rec Yds', 'Rec TD', 'Targets', 'receiving_fumbles',
                 'receiving_fumbles_lost', 'receiving_first_downs', 'receiving_epa',
                 'target_share', 'wopr', 'racr', 'receiving_2pt_conversions',
@@ -33,7 +33,7 @@ def get_advanced_stats(player_data):
             ]
         elif fantasy_position == 'DEF':
             columns = [
-                'player', 'team', 'week', 'year', 'manager', 'points', 'position',
+                'player', 'nfl_team', 'week', 'year', 'manager', 'points', 'nfl_position',
                 'Def Yds Allow', 'Fum Rec', 'Fum Ret TD', 'Pts Allow', 'Pts Allow 0',
                 'Pts Allow 1-6', 'Pts Allow 14-20', 'Pts Allow 21-27', 'Pts Allow 28-34',
                 'Pts Allow 35+', 'Pts Allow 7-13', 'Yds Allow 0-99', 'Yds Allow 100-199',
@@ -43,8 +43,7 @@ def get_advanced_stats(player_data):
                 'Total Points Allowed', 'Muffed Punts'
             ]
         else:
-            columns = ['player', 'team', 'week', 'year', 'manager', 'points', 'position']
-        # Only select columns that exist in the group
+            columns = ['player', 'nfl_team', 'week', 'year', 'manager', 'points', 'nfl_position']
         columns = [col for col in columns if col in group.columns]
         return group[columns]
 

@@ -28,7 +28,7 @@ class CareerMatchupStatsViewer:
 
             agg_dict = {
                 'team_points': aggregation_func,
-                'opponent_score': aggregation_func,
+                'opponent_points': aggregation_func,
                 'win': aggregation_func,
                 'loss': aggregation_func,
                 'unique_years': 'first',
@@ -65,13 +65,13 @@ class CareerMatchupStatsViewer:
                     aggregated_df['championship'] = aggregated_df['championship'] / aggregated_df['unique_years']
 
                 columns_to_average = [
-                    'team_points', 'opponent_score', 'win', 'loss'
+                    'team_points', 'opponent_points', 'win', 'loss'
                 ]
                 for col in columns_to_average:
                     if col in aggregated_df.columns:
                         aggregated_df[col] = aggregated_df[col] / aggregated_df['unique_manager_weeks']
 
-            columns_to_round_2 = [c for c in ['team_points', 'opponent_score'] if c in aggregated_df.columns]
+            columns_to_round_2 = [c for c in ['team_points', 'opponent_points'] if c in aggregated_df.columns]
             columns_to_round_3 = [c for c in ['quarterfinal', 'semifinal', 'championship', 'champion', 'is_playoffs', 'sacko'] if c in aggregated_df.columns]
             if columns_to_round_2:
                 aggregated_df[columns_to_round_2] = aggregated_df[columns_to_round_2].round(2)
@@ -87,7 +87,7 @@ class CareerMatchupStatsViewer:
                 'win': 'W',
                 'loss': 'L',
                 'team_points': 'PF',
-                'opponent_score': 'PA',
+                'opponent_points': 'PA',
                 'quarterfinal': 'Quarterfinals',
                 'semifinal': 'Semifinals',
                 'championship': 'Finals',
