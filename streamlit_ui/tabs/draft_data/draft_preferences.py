@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 
-def order_positions(df, position_col='position', allowed_positions=None):
+def order_positions(df, position_col='yahoo_position', allowed_positions=None):
     if allowed_positions is None:
         allowed_positions = ["QB", "RB", "WR", "TE", "K", "DEF"]
     position_order = pd.CategoricalDtype(allowed_positions, ordered=True)
@@ -13,7 +13,6 @@ def order_positions(df, position_col='position', allowed_positions=None):
 def display_draft_preferences(draft_data, player_df):
     st.header("Draft Preferences")
 
-    # Standardize column names to snake_case
     draft_data = draft_data.rename(columns={
         'Year': 'year',
         'Team Manager': 'manager',
@@ -24,20 +23,20 @@ def display_draft_preferences(draft_data, player_df):
         'Pick': 'pick'
     })
     player_df = player_df.rename(columns={
-        'position': 'position',  # already snake_case
+        'yahoo_position': 'yahoo_position',
         'year': 'year',
         'player': 'player',
         'points': 'points',
         'week': 'week',
-        'playeryear': 'playeryear'
+        'player_year': 'player_year'
     })
 
     draft_data['year'] = draft_data['year'].astype(str)
     draft_data['manager'] = draft_data['manager'].astype(str)
     player_df['year'] = player_df['year'].astype(str)
 
-    if 'position' not in player_df.columns:
-        st.error("The 'position' column is missing from player_df.")
+    if 'yahoo_position' not in player_df.columns:
+        st.error("The 'yahoo_position' column is missing from player_df.")
         return
 
     allowed_primary_positions = ["QB", "RB", "WR", "TE", "K", "DEF"]
@@ -93,7 +92,7 @@ def display_draft_preferences(draft_data, player_df):
                 if selected_manager and selected_manager != 'League Average':
                     filtered_draft_data = filtered_draft_data[filtered_draft_data['manager'] == selected_manager]
 
-                right_cols = [c for c in ['playeryear', 'player', 'points', 'week', 'year', 'position']
+                right_cols = [c for c in ['player_year', 'player', 'points', 'week', 'year', 'yahoo_position']
                               if c in player_df_filtered.columns]
 
                 merged_data = filtered_draft_data.merge(
@@ -108,7 +107,7 @@ def display_draft_preferences(draft_data, player_df):
                     ((merged_data['year'].astype(int) >= 2021) & (merged_data['week'] <= 17))
                 ]
 
-                aggregated_data = merged_data.groupby(['year', 'player', 'position']).agg({
+                aggregated_data = merged_data.groupby(['year', 'player', 'yahoo_position']).agg({
                     'points': 'sum',
                     'cost': 'first',
                     'pick': 'first',
@@ -117,16 +116,16 @@ def display_draft_preferences(draft_data, player_df):
                     'week': pd.Series.nunique
                 }).reset_index()
 
-                aggregated_data['ppg'] = (aggregated_data['points'] / aggregated_data['week']).round(2)
                 aggregated_data['personal_position_rank'] = (
-                    aggregated_data.groupby(['year', 'position', 'manager'])['cost']
+                    aggregated_data.groupby(['year', 'yahoo_position', 'manager'])['cost']
                     .rank(method='first', ascending=False)
+                    .fillna(0)  # Replace NaN with 0
                     .astype(int)
                     .astype(str)
                 )
-                aggregated_data['personal_position_rank'] = aggregated_data['position'] + aggregated_data['personal_position_rank']
+                aggregated_data['personal_position_rank'] = aggregated_data['yahoo_position'] + aggregated_data['personal_position_rank']
 
-                aggregated_data = order_positions(aggregated_data, position_col='position', allowed_positions=allowed_primary_positions)
+                aggregated_data = order_positions(aggregated_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
                 aggregated_data = aggregated_data[aggregated_data['cost'] > 0]
 
                 # Remove years where all costs are zero in the aggregated data
@@ -136,7 +135,7 @@ def display_draft_preferences(draft_data, player_df):
 
                 if selected_manager == 'League Average':
                     avg_data = aggregated_data.groupby(
-                        ['personal_position_rank', 'position']
+                        ['personal_position_rank', 'yahoo_position']
                     ).agg(
                         avg_cost=('cost', 'mean'),
                         max_cost=('cost', 'max'),
@@ -148,7 +147,7 @@ def display_draft_preferences(draft_data, player_df):
                     avg_data['manager'] = 'League Average'
                 else:
                     avg_data = aggregated_data.groupby(
-                        ['personal_position_rank', 'position', 'manager']
+                        ['personal_position_rank', 'yahoo_position', 'manager']
                     ).agg(
                         avg_cost=('cost', 'mean'),
                         max_cost=('cost', 'max'),
@@ -165,11 +164,11 @@ def display_draft_preferences(draft_data, player_df):
                 avg_data = avg_data[~((avg_data[score_cols].isnull()) | (avg_data[score_cols] == 0)).all(axis=1)]
 
                 avg_data['rank_num'] = avg_data['personal_position_rank'].str.extract(r'(\d+)$').fillna(0).astype(int)
-                avg_data = order_positions(avg_data, position_col='position', allowed_positions=allowed_primary_positions)
-                avg_data = avg_data.sort_values(['position', 'rank_num'])
+                avg_data = order_positions(avg_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
+                avg_data = avg_data.sort_values(['yahoo_position', 'rank_num'])
 
                 columns_to_display = [
-                    'personal_position_rank', 'position', 'manager',
+                    'personal_position_rank', 'yahoo_position', 'manager',
                     'avg_cost', 'max_cost', 'min_cost', 'median_cost', 'ppg', 'times_drafted'
                 ]
                 st.subheader(table_title)
@@ -185,7 +184,7 @@ def display_draft_preferences(draft_data, player_df):
                 if selected_manager and selected_manager != 'League Average':
                     filtered_draft_data = filtered_draft_data[filtered_draft_data['manager'] == selected_manager]
 
-                right_cols = [c for c in ['playeryear', 'player', 'points', 'week', 'year', 'position']
+                right_cols = [c for c in ['player_year', 'player', 'points', 'week', 'year', 'yahoo_position']
                               if c in player_df_filtered.columns]
 
                 merged_data = filtered_draft_data.merge(
@@ -200,14 +199,14 @@ def display_draft_preferences(draft_data, player_df):
                     ((merged_data['year'].astype(int) >= 2021) & (merged_data['week'] <= 17))
                 ]
 
-                player_data = merged_data.groupby(['player', 'position', 'manager']).agg({
+                player_data = merged_data.groupby(['player', 'yahoo_position', 'manager']).agg({
                     'cost': 'first',
                     'points': 'sum',
                     'week': pd.Series.nunique
                 }).reset_index()
                 player_data['ppg'] = (player_data['points'] / player_data['week']).round(2)
 
-                player_data = order_positions(player_data, position_col='position', allowed_positions=allowed_primary_positions)
+                player_data = order_positions(player_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
                 player_data = player_data[player_data['cost'] > 0]
 
                 # Remove years where all costs are zero in the player data
@@ -216,7 +215,7 @@ def display_draft_preferences(draft_data, player_df):
                 player_data = player_data[player_data['player'].isin(valid_players)]
 
                 if selected_manager == 'League Average':
-                    avg_data = player_data.groupby(['position']).agg(
+                    avg_data = player_data.groupby(['yahoo_position']).agg(
                         avg_cost=('cost', 'mean'),
                         max_cost=('cost', 'max'),
                         min_cost=('cost', 'min'),
@@ -226,7 +225,7 @@ def display_draft_preferences(draft_data, player_df):
                     ).reset_index()
                     avg_data['manager'] = 'League Average'
                 else:
-                    avg_data = player_data.groupby(['position', 'manager']).agg(
+                    avg_data = player_data.groupby(['yahoo_position', 'manager']).agg(
                         avg_cost=('cost', 'mean'),
                         max_cost=('cost', 'max'),
                         min_cost=('cost', 'min'),
@@ -241,11 +240,11 @@ def display_draft_preferences(draft_data, player_df):
                 score_cols = ['avg_cost', 'ppg', 'times_kept']
                 avg_data = avg_data[~((avg_data[score_cols].isnull()) | (avg_data[score_cols] == 0)).all(axis=1)]
 
-                avg_data = order_positions(avg_data, position_col='position', allowed_positions=allowed_primary_positions)
-                avg_data = avg_data.sort_values(['position'])
+                avg_data = order_positions(avg_data, position_col='yahoo_position', allowed_positions=allowed_primary_positions)
+                avg_data = avg_data.sort_values(['yahoo_position'])
 
                 columns_to_display = [
-                    'position', 'manager',
+                    'yahoo_position', 'manager',
                     'avg_cost', 'max_cost', 'min_cost', 'median_cost', 'ppg', 'times_kept'
                 ]
                 st.subheader(table_title)

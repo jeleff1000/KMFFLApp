@@ -8,18 +8,22 @@ def display_scoring_outcomes(draft_data, player_df):
     draft_data['manager'] = draft_data['manager'].astype(str)
     player_df['year'] = player_df['year'].astype(str)
 
-    if 'position' not in player_df.columns:
-        st.error("The 'position' column is missing from player_df.")
+    if 'yahoo_position' not in player_df.columns:
+        st.error("The 'yahoo_position' column is missing from player_df.")
         return
 
     years = sorted(draft_data['year'].unique().tolist())
     team_managers = sorted(draft_data['manager'].unique().tolist())
     allowed_primary_positions = ["QB", "RB", "WR", "TE", "DEF", "K"]
-    primary_positions = [pos for pos in sorted(player_df['position'].unique().tolist()) if pos in allowed_primary_positions]
+    primary_positions = [
+        pos for pos in sorted(
+            [p for p in player_df['yahoo_position'].unique().tolist() if pd.notna(p)]
+        ) if pos in allowed_primary_positions
+    ]
 
     col1, col2 = st.columns([1, 1])
     with col1:
-        search_players = st.multiselect("Search Player", options=player_df['player_name'].unique().tolist(), default=[])
+        search_players = st.multiselect("Search Player", options=player_df['player'].unique().tolist(), default=[])
     with col2:
         selected_team_managers = st.multiselect("Select manager", team_managers, default=[])
 
@@ -42,9 +46,9 @@ def display_scoring_outcomes(draft_data, player_df):
         draft_data = draft_data[draft_data['manager'].isin(selected_team_managers)]
 
     merged_data = draft_data.merge(
-        player_df[['player_name', 'points', 'week', 'year', 'position']],
+        player_df[['player', 'points', 'week', 'year', 'yahoo_position']],
         left_on=['player_name', 'year'],
-        right_on=['player_name', 'year'],
+        right_on=['player', 'year'],
         how='left'
     )
 
@@ -64,10 +68,9 @@ def display_scoring_outcomes(draft_data, player_df):
         st.write("No data to display after filtering.")
         return
 
-    # Use draft_data's primary_position for grouping and display
     merged_data['position'] = merged_data['primary_position']
 
-    aggregated_data = merged_data.groupby(['year', 'player_name', 'position']).agg({
+    aggregated_data = merged_data.groupby(['year', 'player', 'position']).agg({
         'points': 'sum',
         'cost': 'first',
         'pick': 'first',
@@ -104,7 +107,7 @@ def display_scoring_outcomes(draft_data, player_df):
 
     aggregated_data.rename(columns={
         'points': 'total_points',
-        'player_name': 'Player',
+        'player': 'Player',
         'week': 'unique_weeks',
         'cost_rank': 'Cost Rank',
         'total_points_rank': 'Total Points Rank',
