@@ -23,7 +23,13 @@ from streamlit_ui.tabs.graphs.graphs_overview import display_graphs_overview
 
 @st.cache_resource
 def get_duckdb_conn():
-    return duckdb.connect(database=':memory:')
+    return duckdb.connect(database=":memory:")
+
+def _read_parquet(conn: duckdb.DuckDBPyConnection, path: str) -> pd.DataFrame:
+    # Escape single quotes for SQL and scan via DuckDB
+    safe_path = str(path).replace("'", "''")
+    query = f"SELECT * FROM parquet_scan('{safe_path}')"
+    return conn.execute(query).df()
 
 @st.cache_data(show_spinner=False)
 def load_duckdb_dfs():
@@ -41,7 +47,7 @@ def load_duckdb_dfs():
     for key, fname in files.items():
         path = os.path.join(base_dir, fname)
         try:
-            df_dict[key] = conn.execute(f"SELECT * FROM '{path}'").df()
+            df_dict[key] = _read_parquet(conn, path)
         except Exception as e:
             st.warning(f"Failed to read {path}: {e}")
             df_dict[key] = None

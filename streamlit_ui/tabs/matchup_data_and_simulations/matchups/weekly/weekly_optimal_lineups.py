@@ -1,86 +1,94 @@
+import duckdb
 import pandas as pd
 import streamlit as st
 
-def display_weekly_optimal_lineup(matchup_df, player_df):
-    # Merge player_df and matchup_df at the beginning
-    merged_df = pd.merge(player_df, matchup_df, left_on=['manager', 'week', 'year', 'opponent'], right_on=['manager', 'week', 'year', 'opponent'], how='left')
+def display_weekly_optimal_lineup(matchup_df: pd.DataFrame, player_df: pd.DataFrame):
+    need_p = {"manager","week","year","points","optimal_player"}
+    need_m = {"manager","week","year","opponent","team_points","opponent_points","win","loss","is_playoffs","is_consolation"}
+    miss_p = need_p - set(player_df.columns)
+    miss_m = need_m - set(matchup_df.columns)
+    if miss_p:
+        st.error(f"Player data missing: {sorted(miss_p)}"); return
+    if miss_m:
+        st.error(f"Matchup data missing: {sorted(miss_m)}"); return
 
-    # Remove rows where manager is None
-    merged_df = merged_df[merged_df['manager'].notna()]
+    con = duckdb.connect(database=":memory:")
+    con.register("p", player_df)
+    con.register("m", matchup_df)
 
-    # Keep only the specified columns
-    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_points', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
-    filtered_df = merged_df[columns_to_keep]
+    res = con.execute("""
+        WITH optimal AS (
+            SELECT
+                manager,
+                CAST(week AS BIGINT) AS week,
+                CAST(year AS BIGINT) AS year,
+                SUM(CASE WHEN optimal_player = 1 THEN COALESCE(points, 0) ELSE 0 END) AS optimal_points
+            FROM p
+            WHERE manager IS NOT NULL
+            GROUP BY manager, week, year
+        ),
+        joined AS (
+            SELECT
+                m.manager,
+                CAST(m.week AS BIGINT) AS week,
+                CAST(m.year AS BIGINT) AS year,
+                m.opponent,
+                m.team_points,
+                m.opponent_points,
+                CAST(m.win AS BOOLEAN) AS win,
+                CAST(m.loss AS BOOLEAN) AS loss,
+                CAST(m.is_playoffs AS BOOLEAN) AS is_playoffs,
+                CAST(m.is_consolation AS BOOLEAN) AS is_consolation,
+                COALESCE(o.optimal_points, 0) AS optimal_points
+            FROM m
+            LEFT JOIN optimal o
+              ON o.manager = m.manager AND o.week = CAST(m.week AS BIGINT) AND o.year = CAST(m.year AS BIGINT)
+            WHERE m.manager IS NOT NULL
+        ),
+        opp AS (
+            SELECT
+                j.opponent AS manager,
+                j.week,
+                j.year,
+                j.optimal_points AS opponent_optimal
+            FROM joined j
+        )
+        SELECT
+            j.manager,
+            j.week,
+            j.year,
+            j.opponent,
+            j.team_points,
+            j.optimal_points,
+            j.optimal_points - j.team_points AS lost_points,
+            j.win,
+            j.loss,
+            (j.optimal_points > COALESCE(o2.opponent_optimal, 0)) AS optimal_win,
+            (j.optimal_points <= COALESCE(o2.opponent_optimal, 0)) AS optimal_loss,
+            j.opponent_points,
+            COALESCE(o2.opponent_optimal, 0) AS opponent_optimal,
+            j.is_playoffs,
+            j.is_consolation
+        FROM joined j
+        LEFT JOIN opp o2
+          ON o2.manager = j.opponent AND o2.week = j.week AND o2.year = j.year
+        ORDER BY j.year, j.week, j.manager
+    """).df()
+    con.close()
 
-    # Create a new column that sums the points when optimal_player is 1
-    filtered_df['optimal_points_sum'] = filtered_df[filtered_df['optimal_player'] == 1].groupby(['manager', 'week', 'year'])['points'].transform('sum')
+    # Pretty columns
+    res["Year"] = res["year"].astype("Int64").astype(str)
+    out = res.rename(columns={
+        "week":"Week","opponent":"Opponent",
+        "team_points":"Team Points","optimal_points":"Optimal Points","lost_points":"Lost Points",
+        "win":"Win","loss":"Loss","optimal_win":"Optimal Win","optimal_loss":"Optimal Loss",
+        "opponent_points":"Opp Pts","opponent_optimal":"Opp Optimal",
+        "is_playoffs":"Is Playoffs","is_consolation":"Is Consolation",
+    })[[
+        "manager","Week","Year","Opponent",
+        "Team Points","Optimal Points","Lost Points",
+        "Win","Loss","Optimal Win","Optimal Loss",
+        "Opp Pts","Opp Optimal","Is Playoffs","Is Consolation"
+    ]]
 
-    # Aggregate the data on manager, week, and year
-    aggregated_df = filtered_df.groupby(['manager', 'week', 'year', 'opponent']).agg({
-        'team_points': 'first',
-        'win': 'first',
-        'loss': 'first',
-        'opponent_points': 'first',
-        'points': 'sum',
-        'optimal_points_sum': 'first',
-        'is_playoffs': 'first',
-        'is_consolation': 'first'
-    }).reset_index()
-
-    # Self-join to get opponent's optimal_points_sum
-    opponent_optimal_df = aggregated_df[['manager', 'week', 'year', 'optimal_points_sum']].rename(columns={
-        'manager': 'opponent',
-        'optimal_points_sum': 'opponent_optimal'
-    })
-    aggregated_df = pd.merge(
-        aggregated_df,
-        opponent_optimal_df,
-        how='left',
-        left_on=['opponent', 'week', 'year'],
-        right_on=['opponent', 'week', 'year']
-    )
-
-    # Rename optimal_points_sum to optimal_points
-    aggregated_df.rename(columns={'optimal_points_sum': 'optimal_points'}, inplace=True)
-
-    # Create optimal_win and optimal_loss columns
-    aggregated_df['optimal_win'] = (aggregated_df['optimal_points'] > aggregated_df['opponent_optimal']).astype(bool)
-    aggregated_df['optimal_loss'] = (aggregated_df['optimal_points'] <= aggregated_df['opponent_optimal']).astype(bool)
-
-    # Convert year to integer to remove decimal and then to string to remove commas
-    aggregated_df['year'] = aggregated_df['year'].astype(int).astype(str)
-
-    # Convert win and loss to boolean
-    aggregated_df['win'] = aggregated_df['win'].astype(bool)
-    aggregated_df['loss'] = aggregated_df['loss'].astype(bool)
-
-    # Calculate lost_points as team_points - optimal_points
-    aggregated_df['lost_points'] = aggregated_df['optimal_points'] - aggregated_df['team_points']
-
-    # Reorder columns
-    aggregated_df = aggregated_df[['manager', 'week', 'year', 'opponent', 'team_points', 'optimal_points', 'lost_points', 'win', 'loss', 'optimal_win', 'optimal_loss', 'opponent_points', 'opponent_optimal']]
-
-    # Rename columns
-    aggregated_df = aggregated_df.rename(columns={
-        'week': 'Week',
-        'year': 'Year',
-        'opponent': 'Opponent',
-        'team_points': 'Team Points',
-        'optimal_points': 'Optimal Points',
-        'lost_points': 'Lost Points',
-        'win': 'Win',
-        'loss': 'Loss',
-        'optimal_win': 'Optimal Win',
-        'optimal_loss': 'Optimal Loss',
-        'opponent_points': 'Opp Pts',
-        'opponent_optimal': 'Opp Optimal'
-    })
-
-    # Display the aggregated DataFrame
-    st.dataframe(aggregated_df, hide_index=True)
-
-if __name__ == "__main__":
-    # Example usage
-    player_data = pd.DataFrame()  # Replace with actual player data
-    matchup_data = pd.DataFrame()  # Replace with actual matchup data
-    display_weekly_optimal_lineup(matchup_data, player_data)
+    st.dataframe(out, hide_index=True)
