@@ -63,8 +63,9 @@ def display_traded_player_data(transaction_df, player_df, draft_history_df):
     merged_df['Rest_of_year_Rank'] = merged_df['Rest_of_year_Rank'].fillna(0).astype(int)
     merged_df['Rest_of_year_Rank'] = merged_df['yahoo_position'] + merged_df['Rest_of_year_Rank'].astype(str)
 
-    merged_df['Rank_on_Transaction_Date_Int'] = merged_df['Rank_on_Transaction_Date'].str.extract('(\d+)').fillna(0).astype(int)
-    merged_df['Rest_of_year_Rank_Int'] = merged_df['Rest_of_year_Rank'].str.extract('(\d+)').fillna(0).astype(int)
+    merged_df['Rank_on_Transaction_Date_Int'] = merged_df['Rank_on_Transaction_Date'].str.extract(r'(\d+)').fillna(
+        0).astype(int)
+    merged_df['Rest_of_year_Rank_Int'] = merged_df['Rest_of_year_Rank'].str.extract(r'(\d+)').fillna(0).astype(int)
     merged_df['Change_in_Rank'] = merged_df['Rank_on_Transaction_Date_Int'] - merged_df['Rest_of_year_Rank_Int']
 
     merged_df.rename(columns={
