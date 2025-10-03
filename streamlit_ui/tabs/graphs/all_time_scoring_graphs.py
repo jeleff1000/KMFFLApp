@@ -1,4 +1,5 @@
 import streamlit as st
+import duckdb
 import pandas as pd
 import altair as alt
 
@@ -13,13 +14,15 @@ class AllTimeScoringStatsViewer:
             'final_playoff_seed', 'is_playoffs', 'is_consolation'
         }
         if self.df is not None and required_cols.issubset(self.df.columns) and not self.df.empty:
-            # Safely convert year to int, skipping invalid rows
             self.df['year'] = pd.to_numeric(self.df['year'], errors='coerce')
             self.df = self.df.dropna(subset=['year'])
             if self.df.empty:
                 st.write("No valid data available for plotting after filtering year.")
                 return
             self.df['year'] = self.df['year'].astype(int)
+            con = duckdb.connect()
+            con.register('matchups', self.df)
+
             min_year = int(self.df['year'].min())
             max_year = int(self.df['year'].max())
             col_year1, col_year2 = st.columns(2)
@@ -31,14 +34,14 @@ class AllTimeScoringStatsViewer:
                 st.warning("Start Year must be less than or equal to End Year.")
                 return
 
+            managers = sorted(self.df['manager'].unique().tolist())
+            seeds = sorted(self.df['final_playoff_seed'].dropna().unique().tolist())
             col1, col2 = st.columns(2)
             with col1:
-                managers = sorted(self.df['manager'].unique().tolist())
                 selected_managers = st.multiselect(
                     "Select Manager(s)", managers, default=[], key=f"{prefix}_manager_multiselect"
                 )
             with col2:
-                seeds = sorted(self.df['final_playoff_seed'].dropna().unique().tolist())
                 selected_seeds = st.multiselect(
                     "Select Final Playoff Seed(s)", seeds, default=[], key=f"{prefix}_seed_multiselect"
                 )
@@ -51,53 +54,50 @@ class AllTimeScoringStatsViewer:
             with col5:
                 show_consolation = st.checkbox("Consolation", value=False, key=f"{prefix}_consolation")
 
-            df_season_type = self.df.copy()
-            mask_all = pd.Series([False] * len(df_season_type), index=df_season_type.index)
-            if show_regular:
-                mask_all |= (df_season_type['is_playoffs'] == 0) & (df_season_type['is_consolation'] == 0)
-            if show_playoffs:
-                mask_all |= df_season_type['is_playoffs'] == 1
-            if show_consolation:
-                mask_all |= df_season_type['is_consolation'] == 1
-            df_season_type = df_season_type[mask_all]
-            df_season_type = df_season_type[(df_season_type['year'] >= start_year) & (df_season_type['year'] <= end_year)]
-            if 'cumulative_week' not in df_season_type.columns:
-                df_season_type = df_season_type.sort_values(['year', 'manager_week'])
-                df_season_type['cumulative_week'] = range(1, len(df_season_type) + 1)
-
-            df_filtered = df_season_type.copy()
+            # Build WHERE clause for DuckDB
+            where_clauses = [f"year >= {start_year} AND year <= {end_year}"]
             if selected_managers:
-                df_filtered = df_filtered[df_filtered['manager'].isin(selected_managers)]
+                managers_str = ",".join([f"'{m}'" for m in selected_managers])
+                where_clauses.append(f"manager IN ({managers_str})")
             if selected_seeds:
-                df_filtered = df_filtered[df_filtered['final_playoff_seed'].isin(selected_seeds)]
+                seeds_str = ",".join([f"'{s}'" for s in selected_seeds])
+                where_clauses.append(f"final_playoff_seed IN ({seeds_str})")
+            season_types = []
+            if show_regular:
+                season_types.append("(is_playoffs = 0 AND is_consolation = 0)")
+            if show_playoffs:
+                season_types.append("is_playoffs = 1")
+            if show_consolation:
+                season_types.append("is_consolation = 1")
+            if season_types:
+                where_clauses.append(f"({' OR '.join(season_types)})")
+            where_sql = " AND ".join(where_clauses)
 
-            df_filtered = df_filtered.sort_values(['manager', 'year', 'manager_week'])
+            query = f"SELECT * FROM matchups WHERE {where_sql} ORDER BY manager, year, manager_week"
+            df_filtered = con.execute(query).df()
+            if df_filtered.empty:
+                st.write("No valid data available for plotting after filtering.")
+                return
+
+            if 'cumulative_week' not in df_filtered.columns:
+                df_filtered = df_filtered.sort_values(['year', 'manager_week'])
+                df_filtered['cumulative_week'] = range(1, len(df_filtered) + 1)
+
             df_filtered['team_points'] = df_filtered['team_points'].round(2)
-
-            # Cumulative points per manager
             df_filtered['manager_cumulative_points'] = (
                 df_filtered.groupby('manager')['team_points'].cumsum()
             )
 
-            # Season boundary positions (first cumulative week per year)
             year_boundaries = (
-                df_season_type.groupby('year')['cumulative_week']
+                df_filtered.groupby('year')['cumulative_week']
                 .min()
                 .reset_index()
             )
 
-            # Base line chart
             base_line = alt.Chart(df_filtered).mark_line().encode(
-                x=alt.X(
-                    'cumulative_week:O',
-                    axis=alt.Axis(title='Cumulative Week', grid=False)
-                ),
-                y=alt.Y(
-                    'manager_cumulative_points:Q',
-                    title='Cumulative Points',
-                    axis=alt.Axis(grid=True),
-                    scale=alt.Scale(zero=False, nice=True)
-                ),
+                x=alt.X('cumulative_week:O', axis=alt.Axis(title='Cumulative Week', grid=False)),
+                y=alt.Y('manager_cumulative_points:Q', title='Cumulative Points', axis=alt.Axis(grid=True),
+                        scale=alt.Scale(zero=False, nice=True)),
                 color=alt.Color('manager:N', title='Manager'),
                 tooltip=[
                     alt.Tooltip('manager:N', title='Manager'),
@@ -108,14 +108,26 @@ class AllTimeScoringStatsViewer:
                 ]
             ).properties(width=800, height=400)
 
-            # Dashed vertical rules at season starts
+            # Add scatter points for each week
+            scatter_points = alt.Chart(df_filtered).mark_point(size=60, filled=True, opacity=0.7).encode(
+                x='cumulative_week:O',
+                y='manager_cumulative_points:Q',
+                color=alt.Color('manager:N', title='Manager'),
+                tooltip=[
+                    alt.Tooltip('manager:N', title='Manager'),
+                    alt.Tooltip('year:Q', title='Year'),
+                    alt.Tooltip('manager_week:Q', title='Week'),
+                    alt.Tooltip('cumulative_week:Q', title='Cumulative Week'),
+                    alt.Tooltip('manager_cumulative_points:Q', title='Cumulative Points', format='.2f')
+                ]
+            )
+
             year_rules = (
                 alt.Chart(year_boundaries)
                 .mark_rule(color='#bdbdbd', strokeDash=[4, 3], strokeWidth=1)
                 .encode(x=alt.X('cumulative_week:O', title=None))
             )
 
-            # Year labels at the top
             year_labels = (
                 alt.Chart(year_boundaries)
                 .mark_text(fontSize=12, font='sans-serif', color='black', baseline='top', dy=6)
@@ -126,7 +138,7 @@ class AllTimeScoringStatsViewer:
                 )
             )
 
-            chart = alt.layer(year_rules, base_line, year_labels)
+            chart = alt.layer(year_rules, base_line, scatter_points, year_labels)
             st.altair_chart(chart, use_container_width=True)
         else:
             st.write(

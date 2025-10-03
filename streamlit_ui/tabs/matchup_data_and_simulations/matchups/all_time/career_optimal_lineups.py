@@ -1,16 +1,27 @@
 import pandas as pd
 import streamlit as st
+import duckdb
 
 def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
-    # Merge player_df and matchup_data at the beginning
-    merged_df = pd.merge(player_df, matchup_data, left_on=['manager', 'week', 'year', 'opponent'], right_on=['manager', 'week', 'year', 'opponent'], how='left')
+    # Use DuckDB for memory-efficient merge
+    con = duckdb.connect()
+    con.register('player_data', player_df)
+    con.register('matchup_data', matchup_data)
 
-    # Remove rows where manager is None
-    merged_df = merged_df[merged_df['manager'].notna()]
+    # Only select necessary columns to reduce memory usage
+    merge_query = """
+    SELECT m.manager, m.week, m.year, m.team_points, m.win, m.loss, m.opponent,
+           m.opponent_points, p.points, p.optimal_player, p.fantasy_position,
+           m.is_playoffs, m.is_consolation
+    FROM matchup_data m
+    LEFT JOIN player_data p ON m.manager = p.manager
+                            AND m.week = p.week
+                            AND m.year = p.year
+                            AND m.opponent = p.opponent
+    WHERE m.manager IS NOT NULL
+    """
 
-    # Keep only the specified columns
-    columns_to_keep = ['manager', 'week', 'year', 'team_points', 'win', 'loss', 'opponent', 'opponent_points', 'points', 'optimal_player', 'fantasy_position', 'is_playoffs', 'is_consolation']
-    filtered_df = merged_df[columns_to_keep]
+    filtered_df = con.execute(merge_query).df()
 
     # Create a new column that sums the points when optimal_player is 1
     filtered_df['optimal_points_sum'] = filtered_df[filtered_df['optimal_player'] == 1].groupby(['manager', 'week', 'year'])['points'].transform('sum')
@@ -102,9 +113,3 @@ def display_career_optimal_lineup(player_df, matchup_data, prefix=""):
 
     # Display the career aggregated DataFrame
     st.dataframe(career_aggregated_df, hide_index=True)
-
-if __name__ == "__main__":
-    # Example usage
-    player_data = pd.DataFrame()  # Replace with actual player data
-    matchup_data = pd.DataFrame()  # Replace with actual matchup data
-    display_career_optimal_lineup(player_data, matchup_data, prefix="career")
