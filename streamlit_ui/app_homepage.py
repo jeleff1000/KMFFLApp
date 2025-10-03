@@ -326,7 +326,7 @@ def main() -> None:
             else:
                 st.info("Keeper view needs **player.parquet**.")
         with extras_tabs[2]:
-            safe_render("Team Names", display_team_names, df_dict.get("Matchup Data"))
+            safe_render("Team lNames", display_team_names, df_dict.get("Matchup Data"))
 
 
 # =============================================================================
