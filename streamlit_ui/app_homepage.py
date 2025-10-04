@@ -1,23 +1,13 @@
-#!/usr/bin/env python3
-# KMFFL Streamlit app — Polars-only parquet loading
-
-from __future__ import annotations
-
 import os
 import sys
 from pathlib import Path
 from typing import Dict, Optional, Callable, Any
 
-import pandas as pd
-import polars as pl
+import duckdb
 import streamlit as st
 
-# =============================================================================
-# Repo root / imports
-# =============================================================================
 APP_FILE = Path(__file__).resolve()
 APP_DIR = APP_FILE.parent
-
 
 def _resolve_repo_root() -> Path:
     p = APP_DIR
@@ -26,7 +16,6 @@ def _resolve_repo_root() -> Path:
             return p
         p = p.parent
     return APP_DIR
-
 
 REPO_ROOT = _resolve_repo_root()
 if str(REPO_ROOT) not in sys.path:
@@ -45,9 +34,6 @@ from streamlit_ui.tabs.team_names.team_names import display_team_names
 from streamlit_ui.tabs.homepage.homepage_overview import display_homepage_overview
 from streamlit_ui.tabs.graphs.graphs_overview import display_graphs_overview
 
-# =============================================================================
-# Data location
-# =============================================================================
 DATA_DIR = Path(os.getenv("KMFFL_DATA_DIR", APP_DIR)).resolve()
 FILE_MAP: Dict[str, Path] = {
     "Matchup Data": DATA_DIR / "matchup.parquet",
@@ -58,92 +44,36 @@ FILE_MAP: Dict[str, Path] = {
     "Injury Data": DATA_DIR / "injury.parquet",
 }
 
+@st.cache_resource
+def get_duckdb_connection():
+    return duckdb.connect(database=":memory:")
 
-# =============================================================================
-# Parquet reader
-# =============================================================================
-@st.cache_data(show_spinner=False)
-def read_parquet(path: Path) -> pd.DataFrame:
-    df_pl = pl.read_parquet(path)
-    return df_pl.to_pandas(use_pyarrow_extension_array=True)
-
+def load_parquet_duckdb(con: duckdb.DuckDBPyConnection, path: Path, table_name: str) -> None:
+    safe_path = str(path).replace("'", "''")
+    con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM read_parquet('{safe_path}')")
 
 @st.cache_data(show_spinner=False)
-def load_all_dfs(file_map: Dict[str, Path]) -> Dict[str, Optional[pd.DataFrame]]:
-    dfs = {}
+def load_all_dfs(file_map: Dict[str, Path], _con: duckdb.DuckDBPyConnection) -> Dict[str, Optional[Any]]:
+    tables = {}
     for key, path in file_map.items():
         if not path.exists():
-            dfs[key] = None
+            st.warning(f"{key}: File not found at {path}")
+            tables[key] = None
             continue
         try:
-            dfs[key] = read_parquet(path)
-        except Exception:
-            dfs[key] = None
-    return dfs
+            table_name = key.lower().replace(" ", "_")
+            load_parquet_duckdb(_con, path, table_name)
+            row_count = _con.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
+            st.success(f"{key}: Loaded {row_count:,} rows into DuckDB")
+            tables[key] = table_name
+        except Exception as e:
+            st.error(f"{key}: Failed to load - {type(e).__name__}: {e}")
+            tables[key] = None
+    return tables
 
+def query_to_df(con: duckdb.DuckDBPyConnection, query: str):
+    return con.execute(query).df()
 
-# =============================================================================
-# Schema normalization
-# =============================================================================
-def _normalize_merge_keys(df: Optional[pd.DataFrame], *, rename_full_name: bool = False) -> Optional[pd.DataFrame]:
-    if df is None or df.empty:
-        return df
-    out = df.copy()
-    if rename_full_name and "player" not in out.columns and "full_name" in out.columns:
-        out = out.rename(columns={"full_name": "player"})
-    if "player" in out.columns:
-        out["player"] = out["player"].astype(str).str.strip()
-    for c in ("week", "season", "year"):
-        if c in out.columns:
-            out[c] = pd.to_numeric(out[c], errors="coerce")
-    keys = [c for c in ("player", "week", "season") if c in out.columns]
-    if set(keys) == {"player", "week", "season"}:
-        out = out.dropna(subset=keys)
-        out["week"] = out["week"].astype("int64")
-        out["season"] = out["season"].astype("int64")
-    return out
-
-
-def enforce_minimum_schema(df_dict: Dict[str, Optional[pd.DataFrame]]) -> Dict[str, Optional[pd.DataFrame]]:
-    out = dict(df_dict)
-    mdf = out.get("Matchup Data")
-    sdf = out.get("Schedules")
-
-    if mdf is not None:
-        mdf = mdf.copy()
-        if "opponent_score" not in mdf.columns and "opponent_points" in mdf.columns:
-            mdf["opponent_score"] = mdf["opponent_points"]
-        if "team_score" not in mdf.columns and "team_points" in mdf.columns:
-            mdf["team_score"] = mdf["team_points"]
-        for c in ("year", "week"):
-            if c in mdf.columns:
-                mdf[c] = pd.to_numeric(mdf[c], errors="coerce")
-        for col, default in [("is_playoffs", 0), ("is_consolation", 0)]:
-            if col not in mdf.columns:
-                mdf[col] = default
-
-        if sdf is not None and not sdf.empty:
-            join_keys = [k for k in ("year", "week", "manager", "opponent") if k in mdf.columns and k in sdf.columns]
-            if join_keys:
-                sched_cols = [c for c in ("is_playoffs", "is_consolation", "opponent_score") if c in sdf.columns]
-                flags = sdf[join_keys + sched_cols].drop_duplicates()
-                mdf = mdf.merge(flags, on=join_keys, how="left", suffixes=("", "_sched"))
-                for col in ("is_playoffs", "is_consolation", "opponent_score"):
-                    if f"{col}_sched" in mdf.columns:
-                        mdf[col] = mdf[f"{col}_sched"].fillna(mdf.get(col))
-                        mdf.drop(columns=[f"{col}_sched"], inplace=True)
-
-        if "is_consolation" in mdf.columns and "is_playoffs" in mdf.columns:
-            mdf.loc[mdf["is_consolation"].fillna(0).astype(int) == 1, "is_playoffs"] = 0
-
-        out["Matchup Data"] = mdf
-
-    return out
-
-
-# =============================================================================
-# Safe render wrapper
-# =============================================================================
 def safe_render(title: str, fn: Callable[..., Any], *args, **kwargs) -> None:
     try:
         fn(*args, **kwargs)
@@ -151,16 +81,22 @@ def safe_render(title: str, fn: Callable[..., Any], *args, **kwargs) -> None:
         st.error(f"❌ {title} crashed: {type(e).__name__}: {e}")
         st.exception(e)
 
-
-# =============================================================================
-# App
-# =============================================================================
 def main() -> None:
     st.set_page_config(page_title="KMFFL App", layout="wide")
     st.title("KMFFL App")
 
-    df_dict = load_all_dfs(FILE_MAP)
-    df_dict = enforce_minimum_schema(df_dict)
+    con = get_duckdb_connection()
+    tables = load_all_dfs(FILE_MAP, con)
+
+    # REMOVE enforce_minimum_schema call
+
+    df_dict = {}
+    for key, table_name in tables.items():
+        if table_name:
+            df_dict[key] = query_to_df(con, f"SELECT * FROM {table_name}")
+        else:
+            df_dict[key] = None
+
     available = {k for k, v in df_dict.items() if v is not None}
 
     tabs = st.tabs(["Home", "Managers", "Players", "Draft", "Transactions", "Simulations", "Extras"])
@@ -202,10 +138,17 @@ def main() -> None:
             injury_ready = df_dict.get("Injury Data")
             player_ready = df_dict.get("Player Data")
             if injury_ready is not None and player_ready is not None:
+                if "player" not in injury_ready.columns and "full_name" in injury_ready.columns:
+                    injury_ready = injury_ready.rename(columns={"full_name": "player"})
+                if "player" in injury_ready.columns:
+                    injury_ready["player"] = injury_ready["player"].astype(str).str.strip()
+                if "player" in player_ready.columns:
+                    player_ready["player"] = player_ready["player"].astype(str).str.strip()
+
                 prepared = {
                     **df_dict,
-                    "Injury Data": _normalize_merge_keys(injury_ready, rename_full_name=True),
-                    "Player Data": _normalize_merge_keys(player_ready, rename_full_name=False),
+                    "Injury Data": injury_ready,
+                    "Player Data": player_ready,
                 }
                 safe_render("Injuries", display_injury_overview, prepared)
             else:
@@ -248,7 +191,6 @@ def main() -> None:
                 st.info("Keeper requires player.parquet")
         with extras_tabs[2]:
             safe_render("Team Names", display_team_names, df_dict.get("Matchup Data"))
-
 
 if __name__ == "__main__":
     main()
